@@ -1,0 +1,22 @@
+---
+title: "example_charts"
+output: html_document
+---
+
+Load all CSV files from csvdata folder into variables named after the files
+```{r}
+# Get list of all CSV files in csvdata folder
+csv_files <- list.files("csvdata", pattern = "\\.csv$", full.names = FALSE)
+
+# Remove .csv extension to use as variable names
+file_names <- gsub("\\.csv$", "", csv_files)
+
+# Load each file into a variable with the same name
+
+for (i in seq_along(csv_files)) {
+  file_path <- file.path("csvdata", csv_files[i])
+  var_name <- file_names[i]
+  assign(var_name, read.csv(file_path, stringsAsFactors = FALSE))
+  cat("Loaded:", var_name, "-", nrow(get(var_name)), "rows\n")
+}
+```

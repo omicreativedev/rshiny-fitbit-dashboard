@@ -12,3 +12,9 @@ renv/sandbox/
 .RData
 .Ruserdata
 .positai
+
+# Data Files
+csvdata/*
+!csvdata/.gitkeep
+xlsx_source/*
+!xlsx_source/.gitkeep
