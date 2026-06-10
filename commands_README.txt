@@ -4,42 +4,59 @@
 1. Open Bash (Linux) Terminal in R to repository location
 2. Run cmd //c "tree D:/Repos/rshiny_fitbit-dashboard /F /A > project_tree.txt"
 
+**************************************
+*Run Shiny App
+**************************************
+In console type shiny::runApp()
+
+**************************************
+* Using the project with Renv (a container system for R)
+**************************************
+Open the project in RStudio by double-clicking the rshiny_fitbit-dashboard.Rproj file
+
+In the R console, run: renv::restore()
+
+Wait for all packages to install
+
+Run the app by typing: shiny::runApp()
+
+If renv is not installed
+If you see an error about renv, first install it: install.packages("renv")
+
+Troubleshooting
+Make sure you have opened the .Rproj file, not just the folder
+
+The first time you run renv::restore() it may take several minutes
+
+FOR DEPLOYMENT
+# On server  
+git clone your-repo
+cd your-repo
+R -e "renv::restore()"
+R -e "shiny::runApp()"
+# Server has EXACT same packages you developed with
 -------------------------------------------------------------------------------
-# In your new project, initialize renv
-renv::init()
+// Personal Notes
 
-# This will discover packages used in your code and install them
-# But it won't automatically copy from old projects
+When installing additional packages ie install.packages("name") then renv::snapshot() to update renv
 
-# To replicate packages from an old project:
-# 1. If you have renv.lock from old project, copy it to new project
-# 2. Then run:
-renv::restore()
+Commit changes locally: git add . then git commit -m "message"
 
-# If you don't have renv.lock, but have a list of packages:
-# Create a file with package names, then:
-packages <- c("shiny", "dplyr", "ggplot2", "readxl", ...)  # your packages
-renv::install(packages)
+# Check if git remote is enabled
+git remote -v
 
-# 1. You write your Shiny app code
-# 2. When you need a package, install it:
-install.packages("shiny")  # Goes to project library
+# If need to create token -> https://github.com/settings/tokens
+Use a Personal Access Token (PAT) - Create one here (select "repo" scope)
+Or use GitHub CLI - gh auth login
+Or use Git Credential Manager
+When prompted for username, enter your GitHub username. For password, paste the PAT.
 
-# 3. After adding several packages, snapshot:
-renv::snapshot()  # Updates renv.lock
+# Add remote location to push to
+git remote add origin https://github.com/omicreativedev/rshiny-fitbit-dashboard.git
 
-# 4. Later, if someone else clones your project, they run:
-renv::restore()  # Installs exact versions from renv.lock
+# Push to GitHub salome branch
+git push -u origin main:salome
 
-# See what packages are in your project library
-renv::dependencies()  # Shows packages your code uses
-renv::status()        # Shows differences between library and lockfile
-
-# Check if cache is enabled
-renv::config$cache()
-
-# Enable cache if not already (it usually is)
-renv::config$cache$enabled(TRUE)
-
-# Set cache location (optional - defaults to ~/.cache/R/renv)
-Sys.setenv(RENV_PATHS_CACHE = "D:/R/renv/cache")  # Custom location
+# If a branch exists and you want to force update it
+git push -u origin main:salome --force
+-------------------------------------------------------------------------------
