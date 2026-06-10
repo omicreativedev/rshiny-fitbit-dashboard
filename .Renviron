@@ -1,0 +1,5 @@
+
+RENV_PATHS_CACHE="D:/Programs/R/renv_cache"
+
+# renv cache location
+RENV_PATHS_CACHE="D:/R/renv_cache"

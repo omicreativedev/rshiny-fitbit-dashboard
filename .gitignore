@@ -1,0 +1,14 @@
+# renv specific
+renv/library/
+renv/local/
+renv/cellar/
+renv/python/
+renv/staging/
+renv/sandbox/
+
+# R specific
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.positai

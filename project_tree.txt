@@ -1,0 +1,139 @@
+Folder PATH listing for volume TBDrive
+Volume serial number is 000001F8 62FC:D978
+D:\REPOS\RSHINY_FITBIT-DASHBOARD
+|   .gitignore
+|   .Rprofile
+|   app.R
+|   commands_README.txt
+|   project_tree.txt
+|   ReadMe.md
+|   renv.lock
+|   rshiny_fitbit-dashboard.Rproj
+|   
++---csvdata
++---R
+|       colours.R
+|       
++---renv
+|   |   .gitignore
+|   |   activate.R
+|   |   settings.json
+|   |   
+|   \---library
+|       \---windows
+|           \---R-4.6
+|               \---x86_64-w64-mingw32
+|                   \---renv
+|                       |   config.yml
+|                       |   DESCRIPTION
+|                       |   INDEX
+|                       |   LICENSE
+|                       |   MD5
+|                       |   NAMESPACE
+|                       |   NEWS.md
+|                       |   README.md
+|                       |   
+|                       +---bin
+|                       |       renv
+|                       |       renv.bat
+|                       |       
+|                       +---doc
+|                       |       ci.html
+|                       |       ci.R
+|                       |       ci.Rmd
+|                       |       docker.html
+|                       |       docker.R
+|                       |       docker.Rmd
+|                       |       faq.html
+|                       |       faq.R
+|                       |       faq.Rmd
+|                       |       index.html
+|                       |       package-install.html
+|                       |       package-install.R
+|                       |       package-install.Rmd
+|                       |       package-sources.html
+|                       |       package-sources.R
+|                       |       package-sources.Rmd
+|                       |       packages.html
+|                       |       packages.R
+|                       |       packages.Rmd
+|                       |       packrat.html
+|                       |       packrat.R
+|                       |       packrat.Rmd
+|                       |       profiles.html
+|                       |       profiles.R
+|                       |       profiles.Rmd
+|                       |       python.html
+|                       |       python.R
+|                       |       python.Rmd
+|                       |       renv.html
+|                       |       renv.R
+|                       |       renv.Rmd
+|                       |       rsconnect.html
+|                       |       rsconnect.R
+|                       |       rsconnect.Rmd
+|                       |       
+|                       +---ext
+|                       |       renv.c
+|                       |       
+|                       +---help
+|                       |   |   aliases.rds
+|                       |   |   AnIndex
+|                       |   |   paths.rds
+|                       |   |   renv.rdb
+|                       |   |   renv.rdx
+|                       |   |   
+|                       |   \---figures
+|                       |           logo.svg
+|                       |           
+|                       +---html
+|                       |       00Index.html
+|                       |       R.css
+|                       |       
+|                       +---Meta
+|                       |       features.rds
+|                       |       hsearch.rds
+|                       |       links.rds
+|                       |       nsInfo.rds
+|                       |       package.rds
+|                       |       Rd.rds
+|                       |       vignette.rds
+|                       |       
+|                       +---R
+|                       |       renv
+|                       |       renv.rdb
+|                       |       renv.rdx
+|                       |       
+|                       +---repos
+|                       |   \---src
+|                       |       \---contrib
+|                       |               PACKAGES
+|                       |               PACKAGES.gz
+|                       |               PACKAGES.rds
+|                       |               renv_1.2.3.tar.gz
+|                       |               
+|                       +---resources
+|                       |   |   activate.R
+|                       |   |   scripts-git-askpass.cmd
+|                       |   |   scripts-git-askpass.sh
+|                       |   |   watchdog-process.R
+|                       |   |   WELCOME
+|                       |   |   
+|                       |   \---vendor
+|                       |           renv.R
+|                       |           
+|                       +---rstudio
+|                       |       addins.dcf
+|                       |       
+|                       +---schema
+|                       |       draft-07.renv.lock.schema.json
+|                       |       
+|                       \---sysreqs
+|                               sysreqs.json
+|                               
++---scripts
+|       excel_to_csv-sheets.R
+|       
+\---www
+        custom.css
+        
