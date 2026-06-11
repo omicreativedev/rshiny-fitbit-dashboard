@@ -40,7 +40,9 @@ R -e "shiny::runApp()"
 
 When installing additional packages ie install.packages("name") then renv::snapshot() to update renv
 
-Commit changes locally: git add . then git commit -m "message"
+Commit changes locally:
+git add .
+git commit -m "message"
 
 # Check if git remote is enabled
 git remote -v
