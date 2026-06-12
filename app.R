@@ -59,13 +59,31 @@ load_roles <- function() {
 #' Create a datetime column from date and time columns
 add_datetime_column <- function(df) {
   if (!is.null(df) && nrow(df) > 0 && "date" %in% names(df) && "time" %in% names(df)) {
+    # Extract just the time part (HH:MM:SS) from whatever format
     df <- df %>%
       mutate(
-        datetime = as.POSIXct(paste(date, format(as.POSIXct(time, format="%H:%M:%S"), "%H:%M:%S")), 
-                              format="%Y-%m-%d %H:%M:%S")
-      )
+        # Extract time part using regex (HH:MM:SS at end of string)
+        time_clean = str_extract(time, "\\d{2}:\\d{2}:\\d{2}"),
+        # Create datetime by combining date and clean time
+        datetime = as.POSIXct(paste(date, time_clean), format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+      ) %>%
+      select(-time_clean)
   }
   return(df)
+}
+
+#' Shared ggplot theme for all charts
+dash_theme <- function() {
+  theme_minimal() +
+    theme(
+      panel.grid.major = element_line(color = "#F3F4F6"),
+      panel.grid.minor = element_blank(),
+      axis.text = element_text(size = 10, color = "#6B7280"),
+      axis.title = element_text(size = 11, color = "#6B7280"),
+      legend.position = "bottom",
+      legend.text = element_text(size = 10, color = "#6B7280"),
+      legend.title = element_blank()
+    )
 }
 
 # Helper function for empty plot placeholders
@@ -424,11 +442,6 @@ server <- function(input, output, session) {
         column(12, div(class = "chart-card",
                        p("Sleep Stage Breakdown", class = "chart-title"),
                        plotlyOutput("plot_sleep", height = "280px")))
-      ),
-      fluidRow(
-        column(12, div(class = "chart-card",
-                       p("Activity Level Distribution", class = "chart-title"),
-                       plotlyOutput("plot_activity_levels", height = "280px")))
       )
     )
   }
@@ -553,11 +566,90 @@ server <- function(input, output, session) {
     )
   }
   
-  # ==================== CHART OUTPUTS (PLACEHOLDERS) ====================
+  # ==================== RESTORED CHARTS (OVERVIEW TAB) ====================
   
-  output$plot_hr <- renderPlotly({ create_empty_plot("Heart Rate chart coming soon") })
-  output$plot_steps <- renderPlotly({ create_empty_plot("Steps chart coming soon") })
-  output$plot_sleep <- renderPlotly({ create_empty_plot("Sleep chart coming soon") })
+  # 1. Heart Rate Over Time (Line chart)
+  output$plot_hr <- renderPlotly({
+    df <- hr_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No heart rate data available"))
+    }
+    
+    p <- ggplot(df, aes(x = datetime, y = heart_rate_avg)) +
+      geom_line(color = clr$hr, linewidth = 0.5, alpha = 0.8) +
+      labs(x = NULL, y = "bpm") +
+      dash_theme()
+    
+    ggplotly(p) %>% 
+      layout(hoverlabel = list(bgcolor = "white"),
+             margin = list(l = 50, r = 20, t = 20, b = 40))
+  })
+  
+  # 2. Daily Steps (Column chart with 10k target line)
+  output$plot_steps <- renderPlotly({
+    df <- steps_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No steps data available"))
+    }
+    
+    daily_steps <- df %>%
+      mutate(date = as.Date(date)) %>%
+      group_by(date) %>%
+      summarise(total = sum(steps_5min, na.rm = TRUE))
+    
+    if (nrow(daily_steps) == 0) {
+      return(create_empty_plot("No steps data for selected date range"))
+    }
+    
+    p <- ggplot(daily_steps, aes(x = date, y = total)) +
+      geom_col(fill = clr$steps, width = 0.7, alpha = 0.9) +
+      geom_hline(yintercept = 10000, linetype = "dashed", 
+                 color = "#9CA3AF", linewidth = 0.5) +
+      scale_y_continuous(labels = scales::comma) +
+      scale_x_date(date_labels = "%b %d") +
+      labs(x = NULL, y = "steps") +
+      dash_theme()
+    
+    ggplotly(p) %>% 
+      layout(hoverlabel = list(bgcolor = "white"),
+             margin = list(l = 50, r = 20, t = 20, b = 40))
+  })
+  
+  # 3. Sleep Stage Breakdown (Stacked bar chart - Deep, REM, Light per day)
+  output$plot_sleep <- renderPlotly({
+    df <- sleep_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No sleep data available"))
+    }
+    
+    # Aggregate sleep stages per night
+    sleep_summary <- df %>%
+      group_by(dateOfSleep, sleep_stage) %>%
+      summarise(minutes = n(), .groups = "drop") %>%
+      filter(sleep_stage %in% c("deep", "rem", "light")) %>%
+      mutate(sleep_stage = recode(sleep_stage,
+                                  deep = "Deep",
+                                  rem = "REM",
+                                  light = "Light"))
+    
+    if (nrow(sleep_summary) == 0) {
+      return(create_empty_plot("No sleep stage data available"))
+    }
+    
+    p <- ggplot(sleep_summary, aes(x = as.Date(dateOfSleep), y = minutes, fill = sleep_stage)) +
+      geom_col(width = 0.7, alpha = 0.9) +
+      scale_fill_manual(values = c(Deep = clr$deep, REM = clr$rem, Light = clr$light)) +
+      scale_x_date(date_labels = "%b %d") +
+      labs(x = NULL, y = "minutes") +
+      dash_theme()
+    
+    ggplotly(p) %>% 
+      layout(hoverlabel = list(bgcolor = "white"),
+             margin = list(l = 50, r = 20, t = 20, b = 40))
+  })
+  
+  # ==================== PLACEHOLDER CHARTS (OTHER TABS) ====================
+  
   output$plot_activity_levels <- renderPlotly({ create_empty_plot("Activity levels chart coming soon") })
   
   output$hr_timeseries <- renderPlotly({ create_empty_plot("Heart rate time series coming soon") })
@@ -572,6 +664,8 @@ server <- function(input, output, session) {
   output$zone_minutes_chart <- renderPlotly({ create_empty_plot("Zone minutes coming soon") })
   output$exercise_sessions_chart <- renderPlotly({ create_empty_plot("Exercise sessions coming soon") })
   output$sedentary_chart <- renderPlotly({ create_empty_plot("Sedentary periods coming soon") })
+  
+  # ==================== DATA VIEW TABLE (Admin only, already working) ====================
   
   output$data_view_table <- DT::renderDataTable({
     req(input$data_view_select)

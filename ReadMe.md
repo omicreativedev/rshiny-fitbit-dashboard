@@ -63,3 +63,6 @@ rshiny_fitbit-dashboard/
 
 ## License
 All Rights Reserved
+
+## Version
+0.02

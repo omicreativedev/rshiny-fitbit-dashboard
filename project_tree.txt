@@ -1,17 +1,35 @@
 Folder PATH listing for volume TBDrive
-Volume serial number is 000001D3 62FC:D978
+Volume serial number is 00000257 62FC:D978
 D:\REPOS\RSHINY_FITBIT-DASHBOARD
 |   .gitignore
 |   .Renviron
 |   .Rprofile
 |   app.R
 |   commands_README.txt
+|   example_charts.Rmd
 |   project_tree.txt
 |   ReadMe.md
 |   renv.lock
+|   roles.csv
 |   rshiny_fitbit-dashboard.Rproj
 |   
 +---csvdata
+|       .gitkeep
+|       activity_level_intraday.csv
+|       activity_sessions.csv
+|       breathing_rate_summary.csv
+|       daily_metrics.csv
+|       distance_intraday.csv
+|       fetch_log.csv
+|       hrv_intraday.csv
+|       hr_intraday_5m.csv
+|       sedentary_periods.csv
+|       sleep_minute.csv
+|       spo2_intraday.csv
+|       steps_intraday_5m.csv
+|       tokenSheet.csv
+|       zone_minutes_intraday_5m.csv
+|       
 +---R
 |       colours.R
 |       
@@ -8658,6 +8676,92 @@ D:\REPOS\RSHINY_FITBIT-DASHBOARD
 |   |               |           shinydashboard.rdb
 |   |               |           shinydashboard.rdx
 |   |               |           
+|   |               +---shinyjs
+|   |               |   |   DESCRIPTION
+|   |               |   |   INDEX
+|   |               |   |   LICENSE
+|   |               |   |   MD5
+|   |               |   |   NAMESPACE
+|   |               |   |   NEWS.md
+|   |               |   |   README.md
+|   |               |   |   
+|   |               |   +---doc
+|   |               |   |       index.html
+|   |               |   |       shinyjs-example.html
+|   |               |   |       shinyjs-example.R
+|   |               |   |       shinyjs-example.Rmd
+|   |               |   |       shinyjs-extend.html
+|   |               |   |       shinyjs-extend.R
+|   |               |   |       shinyjs-extend.Rmd
+|   |               |   |       shinyjs-usage.html
+|   |               |   |       shinyjs-usage.R
+|   |               |   |       shinyjs-usage.Rmd
+|   |               |   |       
+|   |               |   +---examples
+|   |               |   |   +---basic
+|   |               |   |   |       app.R
+|   |               |   |   |       DESCRIPTION
+|   |               |   |   |       helper-text.R
+|   |               |   |   |       
+|   |               |   |   +---demo
+|   |               |   |   |   |   helpers.R
+|   |               |   |   |   |   server.R
+|   |               |   |   |   |   ui.R
+|   |               |   |   |   |   
+|   |               |   |   |   \---www
+|   |               |   |   |           github-green-right.png
+|   |               |   |   |           header.png
+|   |               |   |   |           style.css
+|   |               |   |   |           
+|   |               |   |   \---sandbox
+|   |               |   |       |   helpers.R
+|   |               |   |       |   server.R
+|   |               |   |       |   ui.R
+|   |               |   |       |   
+|   |               |   |       \---www
+|   |               |   |               github-green-right.png
+|   |               |   |               header.png
+|   |               |   |               style.css
+|   |               |   |               
+|   |               |   +---help
+|   |               |   |       aliases.rds
+|   |               |   |       AnIndex
+|   |               |   |       paths.rds
+|   |               |   |       shinyjs.rdb
+|   |               |   |       shinyjs.rdx
+|   |               |   |       
+|   |               |   +---html
+|   |               |   |       00Index.html
+|   |               |   |       R.css
+|   |               |   |       
+|   |               |   +---img
+|   |               |   |       banner.png
+|   |               |   |       colourPickerGadget.gif
+|   |               |   |       colourpickerscrnshot.png
+|   |               |   |       demo-basic-v1.png
+|   |               |   |       extendshinyjs-demo.gif
+|   |               |   |       extendshinyjs-params.gif
+|   |               |   |       hex.png
+|   |               |   |       shinyjs-logo-whitebg-small.png
+|   |               |   |       
+|   |               |   +---Meta
+|   |               |   |       features.rds
+|   |               |   |       hsearch.rds
+|   |               |   |       links.rds
+|   |               |   |       nsInfo.rds
+|   |               |   |       package.rds
+|   |               |   |       Rd.rds
+|   |               |   |       vignette.rds
+|   |               |   |       
+|   |               |   +---R
+|   |               |   |       shinyjs
+|   |               |   |       shinyjs.rdb
+|   |               |   |       shinyjs.rdx
+|   |               |   |       
+|   |               |   \---srcjs
+|   |               |           inject.js
+|   |               |           shinyjs-default-funcs.js
+|   |               |           
 |   |               +---sourcetools
 |   |               |   |   DESCRIPTION
 |   |               |   |   INDEX
@@ -10101,10 +10205,12 @@ D:\REPOS\RSHINY_FITBIT-DASHBOARD
 +---scripts
 |       excel_to_csv-sheets.R
 |       install_packages.R
+|       merge_excel_files.R
 |       
 +---www
 |       custom.css
 |       
 \---xlsx_source
+        .gitkeep
         FitbitDataSync.xlsx
         
