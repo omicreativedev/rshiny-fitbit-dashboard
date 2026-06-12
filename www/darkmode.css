@@ -1,0 +1,173 @@
+/* www/custom.css – Fitbit Dashboard UI styles (Dark Mode) */
+body {
+  font-family: 'Inter', sans-serif;
+  background: #111317;
+}
+.top-bar {
+  background: #1C1F26;
+  border-bottom: 1px solid #2E3138;
+  padding: 14px 28px;
+}
+.top-bar h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  color: #F0F1F3;
+}
+.top-bar p {
+  margin: 0;
+  font-size: 12px;
+  color: #8B909A;
+}
+/* Login section - inline layout */
+.login-section {
+  background: #1C1F26;
+  border-bottom: 1px solid #2E3138;
+  padding: 8px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 20px;
+}
+.login-form {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+.login-form .shiny-input-container {
+  margin-bottom: 0;
+}
+.user-info {
+  font-size: 13px;
+  color: #8B909A;
+}
+/* Filters row - horizontal layout */
+.filters-row {
+  background: #1C1F26;
+  border-bottom: 1px solid #2E3138;
+  padding: 10px 28px;
+  display: flex;
+  gap: 30px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.filters-row .shiny-input-container {
+  margin-bottom: 0;
+}
+.admin-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.admin-selector label {
+  margin-bottom: 0;
+  font-size: 13px;
+  font-weight: normal;
+  color: #C5C8CE;
+}
+/* Main container */
+.main-container {
+  padding: 20px 28px;
+}
+/* Compact metric cards */
+.metric-card {
+  background: #1C1F26;
+  border-radius: 10px;
+  padding: 10px 15px;
+  border: 1px solid #2E3138;
+  text-align: center;
+}
+.metric-label {
+  font-size: 10px;
+  color: #8B909A;
+  margin-bottom: 4px;
+  letter-spacing: 0.5px;
+}
+.metric-value {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #F0F1F3;
+}
+.metric-unit {
+  font-size: 10px;
+  color: #8B909A;
+  margin-top: 4px;
+}
+/* Chart cards */
+.chart-card {
+  background: #1C1F26;
+  border-radius: 10px;
+  padding: 12px 15px;
+  border: 1px solid #2E3138;
+  margin-bottom: 14px;
+}
+.chart-title {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: #F0F1F3;
+}
+.placeholder-text {
+  color: #555A64;
+}
+ 
+/* Shiny input overrides for dark mode */
+.shiny-input-container label {
+  color: #C5C8CE;
+}
+.form-control,
+input[type="text"],
+input[type="password"],
+input[type="email"],
+select,
+textarea {
+  background-color: #252830;
+  border: 1px solid #2E3138;
+  color: #F0F1F3;
+}
+.form-control:focus,
+input[type="text"]:focus,
+input[type="password"]:focus,
+select:focus {
+  background-color: #252830;
+  border-color: #4A7CDB;
+  color: #F0F1F3;
+  box-shadow: 0 0 0 2px rgba(74, 124, 219, 0.25);
+}
+.form-control::placeholder {
+  color: #555A64;
+}
+.btn-default,
+.btn-primary {
+  background-color: #252830;
+  border-color: #2E3138;
+  color: #C5C8CE;
+}
+.btn-primary {
+  background-color: #2A4A8C;
+  border-color: #3560B8;
+  color: #E8EEFF;
+}
+.btn-default:hover,
+.btn-primary:hover {
+  background-color: #2E3340;
+  border-color: #4A7CDB;
+  color: #F0F1F3;
+}
+.selectize-control .selectize-input {
+  background-color: #252830;
+  border: 1px solid #2E3138;
+  color: #F0F1F3;
+}
+.selectize-control .selectize-dropdown {
+  background-color: #1C1F26;
+  border: 1px solid #2E3138;
+  color: #F0F1F3;
+}
+.selectize-dropdown .option:hover,
+.selectize-dropdown .option.active {
+  background-color: #2A3145;
+  color: #F0F1F3;
+}

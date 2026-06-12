@@ -18,3 +18,4 @@ csvdata/*
 !csvdata/.gitkeep
 xlsx_source/*
 !xlsx_source/.gitkeep
+notes_salome.txt

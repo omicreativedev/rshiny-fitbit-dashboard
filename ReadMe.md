@@ -37,20 +37,45 @@ then run scripts/excel_to_csv-sheet.R
 
 ## Project Structure
 
+```text
+## Project Structure
+```text
 rshiny_fitbit-dashboard/
-├── app.R              # Main Shiny application
-├── R/                 # Helper functions and color palettes
-│   └── colours.R      # Custom color definitions
-├── www/               # Web assets
-│   └── custom.css     # Custom CSS styling (default lightmode)
-│   └── darkmode.css   # TBD
-├── scripts/           # Utility scripts
-│   ├── excel_to_csv-sheets.R # Converts 1 workbook to csv by sheet(tab)
-│   └── install_packages.R # Some helpful packages
-│   └── merge_excel_files.R # Draft script for merging multiple workbooks
-├── csvdata/           # Directory for csv files generated from xlsx workbook
-├── xlsx_source/       # Directory for xlsx source files
-└── renv/              # renv package management
+├── rshiny_fitbit-dashboard.Rproj # Project file to click to open project
+├── app.R                         # Main Shiny application entry point
+├── example_charts.Rmd            # Example charts
+├── reference_charts.Rmd          # Reference charts
+├── commands_README.txt           # Useful commands reference
+├── roles.csv                     # Role definitions used by the app
+├── renv.lock                     # Locked package versions for reproducibility
+├── R/                            # Include R scripts
+│   └── colours.R                 # Custom color palette definitions
+├── www/
+│   └── custom.css                # Custom CSS styling (light mode)
+│   └── darkmode.css              # Example darkmode styling
+├── scripts/
+│   ├── excel_to_csv-sheets.R     # Converts an xlsx workbook to CSVs per sheet
+│   ├── merge_excel_files.R       # Draft script for merging multiple workbooks
+│   └── install_packages.R        # Helper to install required packages
+├── csvdata/                      # CSV files exported from the xlsx source (gitignored)
+│   ├── daily_metrics.csv             # < Gitignored: Your csv's must be named
+│   ├── activity_sessions.csv         # < these exact names based on the tab
+│   ├── activity_level_intraday.csv   # < names in the Source Fitbit data workbook
+│   ├── steps_intraday_5m.csv         # < 
+│   ├── hr_intraday_5m.csv            # <
+│   ├── hrv_intraday.csv              # <
+│   ├── breathing_rate_summary.csv    # <
+│   ├── distance_intraday.csv         # <
+│   ├── zone_minutes_intraday_5m.csv  # <
+│   ├── spo2_intraday.csv             # <
+│   ├── sleep_minute.csv              # <
+│   ├── sedentary_periods.csv         # <
+│   ├── fetch_log.csv                 # <
+│   └── tokenSheet.csv                # Fitbit API token storage (emptied!)
+├── xlsx_source/                  # Source Fitbit data workbook (gitignored)
+│   └── FitbitDataSync.xlsx       # Google Sheet App downloaded as .xlsx
+└── renv/                         # renv package management (auto-managed)
+```
 
 ## Troubleshooting
 - Be sure you opened the .Rproj file, not just the folder
@@ -65,4 +90,4 @@ rshiny_fitbit-dashboard/
 All Rights Reserved
 
 ## Version
-0.03
+0.04
