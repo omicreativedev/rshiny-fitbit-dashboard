@@ -9,6 +9,7 @@ library(tidyverse)       # Data manipulation (dplyr, ggplot2, etc.)
 library(lubridate)       # Date/time handling
 library(plotly)          # Interactive charts
 library(DT)              # Interactive data tables
+library(shinyfullscreen) # Lets wrapped charts go fullscreen when double clicked
 
 # Source external colour palette (used across all charts)
 source("R/colours.R")
