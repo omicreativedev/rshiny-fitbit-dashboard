@@ -33,12 +33,17 @@ for (i in seq_along(csv_files)) {
 
 # Helper functions -----------------------------------------
 
-add_datetime <- function(df) {
+add_datetime_column <- function(df) {
   if (!is.null(df) && nrow(df) > 0 && "date" %in% names(df) && "time" %in% names(df)) {
     df %>%
       mutate(
-        time_clean = str_extract(time, "\\d{2}:\\d{2}:\\d{2}"),
-        datetime = as.POSIXct(paste(date, time_clean), format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+        # Extract HH:MM:SS if present; if bare date only (midnight), use "00:00:00"
+        time_clean = case_when(
+          str_detect(time, "\\d{2}:\\d{2}:\\d{2}") ~ str_extract(time, "\\d{2}:\\d{2}:\\d{2}"),
+          TRUE ~ "00:00:00"   # bare "1899-12-31" = midnight
+        ),
+        datetime = as.POSIXct(paste(date, time_clean), 
+                              format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
       ) %>%
       select(-time_clean)
   } else {
