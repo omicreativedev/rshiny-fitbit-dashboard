@@ -123,6 +123,21 @@ hrv_data <- hrv_intraday %>%
 zone_data <- zone_minutes_intraday_5m %>%
   add_datetime_column() %>%
   filter(!is.na(datetime))
+
+# Prepare distance data
+distance_data <- distance_intraday %>%
+  add_datetime_column() %>%
+  filter(!is.na(datetime))
+
+# Prepare activity level data  
+activity_level_data <- activity_level_intraday %>%
+  add_datetime_column() %>%
+  filter(!is.na(datetime))
+
+# Prepare steps data
+steps_data <- steps_intraday_5m %>%
+  add_datetime_column() %>%
+  filter(!is.na(datetime))
 ```
 
 ## Heart Rate Tab
