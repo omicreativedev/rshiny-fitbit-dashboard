@@ -1,5 +1,5 @@
 ---
-title: "Exmple Charts for Fitbit Dashboard"
+title: "Example Charts for Fitbit Dashboard"
 output: html_document
 ---
 
@@ -53,6 +53,7 @@ for (df_name in all_data_frames) {
   }
 }
 
+# Helper: Convert date+time columns to datetime (handles 1899 Excel bug)
 add_datetime_column <- function(df) {
   if (!is.null(df) && nrow(df) > 0 && "date" %in% names(df) && "time" %in% names(df)) {
     df %>%
@@ -69,6 +70,14 @@ add_datetime_column <- function(df) {
   } else {
     df
   }
+}
+
+# Helper: Convert ISO timestamp to datetime (used by HRV, sessions, etc.)
+add_datetime_from_timestamp <- function(df, timestamp_col = "timestamp") {
+  if (!is.null(df) && nrow(df) > 0 && timestamp_col %in% names(df)) {
+    df$datetime <- as.POSIXct(df[[timestamp_col]], format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
+  }
+  return(df)
 }
 
 #' Zero-fill a sparse intraday dataframe to a complete 5-minute grid
@@ -107,37 +116,84 @@ dash_theme <- function() {
     )
 }
 
-# PREPARE DATA -------------------------------------------
+# PREPARE DATA - Following app.R patterns -------------------------------------------
 
-# Prepare HR data
+# Prepare HR data (date+time columns)
 hr_data <- hr_intraday_5m %>%
   add_datetime_column() %>%
   filter(!is.na(datetime), heart_rate_avg > 30, heart_rate_avg < 220)
 
-# Prepare HRV data
-hrv_data <- hrv_intraday %>%
-  mutate(datetime = as.POSIXct(timestamp, format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")) %>%
-  filter(!is.na(datetime), rmssd_ms > 0, rmssd_ms < 200)
-
-# Prepare zone minutes data
-zone_data <- zone_minutes_intraday_5m %>%
+# Prepare Steps data (date+time columns)
+steps_data <- steps_intraday_5m %>%
   add_datetime_column() %>%
   filter(!is.na(datetime))
 
-# Prepare distance data
-distance_data <- distance_intraday %>%
-  add_datetime_column() %>%
-  filter(!is.na(datetime))
+# Prepare Distance data (date+time columns)
+if (exists("distance_intraday")) {
+  distance_data <- distance_intraday %>%
+    add_datetime_column() %>%
+    filter(!is.na(datetime))
+}
 
-# Prepare activity level data  
+# Prepare Activity Level data (date+time columns)
 activity_level_data <- activity_level_intraday %>%
   add_datetime_column() %>%
   filter(!is.na(datetime))
 
-# Prepare steps data
-steps_data <- steps_intraday_5m %>%
+# Prepare Zone Minutes data (date+time columns)
+zone_data <- zone_minutes_intraday_5m %>%
   add_datetime_column() %>%
   filter(!is.na(datetime))
+
+# Prepare HRV data (timestamp column - different format!)
+hrv_data <- hrv_intraday %>%
+  add_datetime_from_timestamp() %>%
+  filter(!is.na(datetime), rmssd_ms > 0, rmssd_ms < 200)
+
+# Add rolling average for HRV (as in app.R)
+hrv_data <- hrv_data %>%
+  arrange(datetime) %>%
+  mutate(
+    rolling_avg = zoo::rollapply(rmssd_ms, width = min(10, n()), 
+                                 FUN = mean, fill = NA, align = "center")
+  )
+
+# Prepare Sleep data (ensure date column is proper Date type)
+sleep_data <- sleep_minute %>%
+  mutate(dateOfSleep = as.Date(dateOfSleep))
+
+# Prepare Activity Sessions (needs start/end datetimes)
+if (exists("activity_sessions")) {
+  activity_sessions_data <- activity_sessions %>%
+    mutate(
+      start_datetime = as.POSIXct(start_time, format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+      end_datetime = as.POSIXct(end_time, format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
+    ) %>%
+    filter(!is.na(start_datetime))
+}
+
+# Prepare Sedentary Periods (needs start/end datetimes)
+if (exists("sedentary_periods")) {
+  sedentary_data <- sedentary_periods %>%
+    mutate(
+      start_datetime = as.POSIXct(period_start, format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC"),
+      end_datetime = as.POSIXct(period_end, format = "%Y-%m-%dT%H:%M:%SZ", tz = "UTC")
+    ) %>%
+    filter(!is.na(start_datetime))
+}
+
+# Prepare SpO2 data (with validation bounds)
+if (exists("spo2_intraday")) {
+  spo2_data <- spo2_intraday %>%
+    add_datetime_from_timestamp() %>%
+    filter(!is.na(datetime), value > 70, value < 100)  # Remove invalid readings
+}
+
+# Prepare Breathing Rate data
+if (exists("breathing_rate_summary")) {
+  breathing_data <- breathing_rate_summary %>%
+    mutate(date = as.Date(date))
+}
 ```
 
 ## Heart Rate Tab
