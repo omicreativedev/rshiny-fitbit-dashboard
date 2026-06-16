@@ -1,6 +1,12 @@
 ---
 title: "Example Charts for Fitbit Dashboard"
-output: html_document
+author: "Salome"
+date: "`r Sys.Date()`"
+output: 
+  html_document:
+    theme: flatly
+    toc: true
+    toc_float: true
 ---
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
@@ -28,7 +34,7 @@ for (i in seq_along(csv_files)) {
   file_path <- file.path("csvdata", csv_files[i])
   var_name <- file_names[i]
   assign(var_name, read.csv(file_path, stringsAsFactors = FALSE))
-  cat("Loaded:", var_name, "-", nrow(get(var_name)), "rows\n")
+  #cat("Loaded:", var_name, "-", nrow(get(var_name)), "rows\n")
 }
 ```
 
@@ -52,7 +58,7 @@ for (df_name in all_data_frames) {
   assign(df_name, df_cleaned)
   # Report what changed (optional)
   if (!identical(names(df), names(df_cleaned))) {
-    cat("✓ Sanitized column names in:", df_name, "\n")
+    #cat("✓ Sanitized column names in:", df_name, "\n")
   }
 }
 
@@ -99,6 +105,29 @@ zero_fill_5min <- function(df, value_col) {
     mutate(across(all_of(value_col), ~ replace_na(., 0))) %>%
     ungroup() %>%
     select(-date_only)
+}
+
+# Helper function for empty plots
+create_empty_plot <- function(message = "No data available") {
+  # Create a simple empty plot with a message
+  p <- ggplot() + 
+    annotate("text", x = 0.5, y = 0.5, 
+             label = message, 
+             size = 5, 
+             color = clr$text_secondary,
+             hjust = 0.5) +
+    theme_void() +
+    theme(
+      plot.background = element_rect(fill = clr$bg, color = NA),
+      panel.background = element_rect(fill = clr$bg, color = NA)
+    )
+  
+  # Return as plotly for consistency with other charts
+  ggplotly(p) %>%
+    layout(
+      hoverlabel = list(bgcolor = clr$bg),
+      margin = list(l = 20, r = 20, t = 20, b = 20)
+    )
 }
 ```
 
@@ -221,7 +250,7 @@ if (exists("breathing_rate_summary")) {
 
 ## Overview Tab
 
-### 1-4 KPI'S Avg. HR, Avg. Steps, Avg. Deep Sleep, Avg. SpO2
+### 1-4. Overview KPI's
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # ===== KPI: Average Heart Rate =====
@@ -261,7 +290,7 @@ if (exists("spo2_data") && !is.null(spo2_data) && nrow(spo2_data) > 0) {
   kpi_spo2 <- NA
 }
 
-kpi_table <- data.frame(
+overview_kpi_table <- data.frame(
   Metric = c("Average Daily Heart Rate", "Average Daily Steps", "Average Deep Sleep", "Average SpO2"),
   Value = c(
     paste(kpi_hr, "bpm"),
@@ -560,7 +589,7 @@ if (exists("sleep_summary") && !is.null(sleep_summary) && nrow(sleep_summary) > 
 # })
 ```
 
-### 8. Sleep Stage Distribution (Overall Donut)
+### 8. Sleep Stage Distribution
 
 Overall percentages of time in each stage (Deep, REM, Light, Wake) across all dates combined
 
@@ -612,7 +641,7 @@ if (exists("sleep_data") && !is.null(sleep_data) && nrow(sleep_data) > 0) {
 
 ## Heart Rate Tab
 
-### 14. HR Time Series with Smooth Overlay
+### 14. HR Time Series w/Overlay
 
 Raw heart rate values (thin line) with a LOESS smooth trend (thick line) to reveal daily patterns and overall trend. Helps identify resting HR trends, exercise intensity periods, and potential recovery patterns.
 
@@ -715,7 +744,7 @@ ggplotly(hr_timeseries_plot, tooltip = c("x", "y")) %>%
 # })
 ```
 
-### 15. Heart Rate by Hour of Day
+### 15. Heart Rate by Hour
 
 Average heart rate for each hour of the day (e.g., 8 AM average, 9 AM average) across the selected date range. Reveals daily circadian patterns, typical resting HR during sleep, and peak activity hours.
 
@@ -922,7 +951,7 @@ plot_ly() %>%
 # })
 ```
 
-## 18. Activity Zone Minutes
+### 17. Activity Zone Minutes
 
 Daily breakdown of minutes spent in Fat Burn, Cardio, and Peak heart rate zones.
 Shows workout intensity distribution. Helps users understand if they're meeting weekly zone minute goals (typically 150+ minutes of moderate-to-vigorous activity).
@@ -1069,9 +1098,9 @@ plot_ly() %>%
 # })
 ```
 
-## Admin: 17. HRV Time Series (Heart Rate Variability)
+## 18. Admin: HRV Time Series
 
-RMSSD values over time. Higher HRV indicates better recovery and parasympathetic nervous system activation. Tracks recovery status. Low HRV may indicate stress, fatigue, or over-training. High HRV (relative to baseline) suggests good recovery.
+Heart Rate Variability RMSSD values over time. Higher HRV indicates better recovery and parasympathetic nervous system activation. Tracks recovery status. Low HRV may indicate stress, fatigue, or over-training. High HRV (relative to baseline) suggests good recovery.
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # ===== DATA PREPARATION =====
@@ -1479,7 +1508,7 @@ hypnogram_plot
 ```
 
 
-### 29. Sleep Duration per Night (Column Chart)
+### 29. Sleep Duration per Night
 
 Total duration of how much sleep was gotten per night over time, all staged summed.How many hours am I sleeping each night?
 
@@ -1515,9 +1544,127 @@ if (exists("sleep_data") && !is.null(sleep_data) && nrow(sleep_data) > 0) {
 } else {
   create_empty_plot("No sleep data available")
 }
+
+# ===== SLEEP STAGE STACKED BARS PER NIGHT =====
+if (exists("sleep_data") && !is.null(sleep_data) && nrow(sleep_data) > 0) {
+  stacked_data <- sleep_data %>%
+    filter(sleep_stage %in% c("deep", "rem", "light", "wake")) %>%
+    group_by(dateOfSleep, sleep_stage) %>%
+    summarise(minutes = n(), .groups = "drop") %>%
+    mutate(
+      sleep_stage = recode(sleep_stage,
+                          deep = "Deep",
+                          rem = "REM",
+                          light = "Light",
+                          wake = "Wake"),
+      dateOfSleep = as.Date(dateOfSleep)
+    )
+  
+  # Use ggplotly with explicit style() to preserve colors
+  p <- ggplot(stacked_data, aes(x = dateOfSleep, y = minutes, fill = sleep_stage)) +
+    geom_col(width = 0.7, alpha = 0.9) +
+    scale_fill_manual(values = c(Deep = clr$deep, REM = clr$rem, Light = clr$light, Wake = clr$wake)) +
+    scale_x_date(date_labels = "%b %d") +
+    labs(x = NULL, y = "Minutes") +
+    theme_minimal() +
+    theme(
+      legend.position = "bottom",
+      plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+      panel.grid.major = element_line(color = clr$grid_line, linewidth = 0.3),
+      panel.grid.minor = element_blank()
+    )
+  
+  ggplotly(p, tooltip = c("x", "y", "fill")) %>%
+    layout(
+      title = list(text = "Sleep Stages per Night", x = 0.5),
+      xaxis = list(title = ""),
+      yaxis = list(title = "Minutes"),
+      margin = list(l = 50, r = 20, t = 50, b = 40),
+      hoverlabel = list(bgcolor = clr$bg),
+      legend = list(
+        orientation = "h",
+        yanchor = "bottom",
+        y = -0.15,
+        xanchor = "center",
+        x = 0.5
+      )
+    ) %>%
+    style(
+      marker = list(
+        color = ~ifelse(sleep_stage == "Deep", clr$deep,
+                 ifelse(sleep_stage == "REM", clr$rem,
+                 ifelse(sleep_stage == "Light", clr$light,
+                 clr$wake)))
+      )
+    )
+} else {
+  create_empty_plot("No sleep data available")
+}
+
+# ===== FOR APP.R: Add to UI =====
+# Check previous chart ^ for fullscreen code
+# ===== FOR APP.R: Wrap in renderPlotly =====
+# output$sleep_stages_chart <- renderPlotly({
+#   req(sleep_data())
+#
+#   stacked_data <- sleep_data() %>%
+#     filter(sleep_stage %in% c("deep", "rem", "light", "wake")) %>%
+#     group_by(dateOfSleep, sleep_stage) %>%
+#     summarise(minutes = n(), .groups = "drop") %>%
+#     mutate(
+#       sleep_stage = recode(sleep_stage,
+#                           deep = "Deep",
+#                           rem = "REM",
+#                           light = "Light",
+#                           wake = "Wake"),
+#       dateOfSleep = as.Date(dateOfSleep)
+#     )
+#
+#   if (nrow(stacked_data) == 0) {
+#     return(create_empty_plot("No sleep data available for selected filters"))
+#   }
+#
+#   # Use ggplotly with explicit style() to preserve colors
+#   p <- ggplot(stacked_data, aes(x = dateOfSleep, y = minutes, fill = sleep_stage)) +
+#     geom_col(width = 0.7, alpha = 0.9) +
+#     scale_fill_manual(values = c(Deep = clr$deep, REM = clr$rem, Light = clr$light, Wake = clr$wake)) +
+#     scale_x_date(date_labels = "%b %d") +
+#     labs(x = NULL, y = "Minutes") +
+#     theme_minimal() +
+#     theme(
+#       legend.position = "bottom",
+#       plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+#       panel.grid.major = element_line(color = clr$grid_line, linewidth = 0.3),
+#       panel.grid.minor = element_blank()
+#     )
+#
+#   ggplotly(p, tooltip = c("x", "y", "fill")) %>%
+#     layout(
+#       title = list(text = "Sleep Stages per Night", x = 0.5),
+#       xaxis = list(title = ""),
+#       yaxis = list(title = "Minutes"),
+#       margin = list(l = 50, r = 20, t = 50, b = 40),
+#       hoverlabel = list(bgcolor = clr$bg),
+#       legend = list(
+#         orientation = "h",
+#         yanchor = "bottom",
+#         y = -0.15,
+#         xanchor = "center",
+#         x = 0.5
+#       )
+#     ) %>%
+#     style(
+#       marker = list(
+#         color = ~ifelse(sleep_stage == "Deep", clr$deep,
+#                  ifelse(sleep_stage == "REM", clr$rem,
+#                  ifelse(sleep_stage == "Light", clr$light,
+#                  clr$wake)))
+#       )
+#     )
+# })
 ```
 
-### 30. Sleep Efficiency (Line Chart with Target Reference)
+### 30. Sleep Efficiency
 
 Ratio of asleep minutes to total minutes in bed (including wake periods). How much time in bed was good sleep?
 
@@ -1655,251 +1802,7 @@ if (exists("sleep_data") && !is.null(sleep_data) && nrow(sleep_data) > 0) {
 # })
 ```
 
-### 31. Sleep Stage Stacked Bars per Night
-
-Daily breakdown showing minutes in EACH stage per night. How does my sleep composition change night-to-night?
-
-Note: We should label the minutes.
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
-# ===== SLEEP STAGE STACKED BARS PER NIGHT =====
-if (exists("sleep_data") && !is.null(sleep_data) && nrow(sleep_data) > 0) {
-  stacked_data <- sleep_data %>%
-    filter(sleep_stage %in% c("deep", "rem", "light", "wake")) %>%
-    group_by(dateOfSleep, sleep_stage) %>%
-    summarise(minutes = n(), .groups = "drop") %>%
-    mutate(
-      sleep_stage = recode(sleep_stage,
-                          deep = "Deep",
-                          rem = "REM",
-                          light = "Light",
-                          wake = "Wake"),
-      dateOfSleep = as.Date(dateOfSleep)
-    )
-  
-  # Use ggplotly with explicit style() to preserve colors
-  p <- ggplot(stacked_data, aes(x = dateOfSleep, y = minutes, fill = sleep_stage)) +
-    geom_col(width = 0.7, alpha = 0.9) +
-    scale_fill_manual(values = c(Deep = clr$deep, REM = clr$rem, Light = clr$light, Wake = clr$wake)) +
-    scale_x_date(date_labels = "%b %d") +
-    labs(x = NULL, y = "Minutes") +
-    theme_minimal() +
-    theme(
-      legend.position = "bottom",
-      plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
-      panel.grid.major = element_line(color = clr$grid_line, linewidth = 0.3),
-      panel.grid.minor = element_blank()
-    )
-  
-  ggplotly(p, tooltip = c("x", "y", "fill")) %>%
-    layout(
-      title = list(text = "Sleep Stages per Night", x = 0.5),
-      xaxis = list(title = ""),
-      yaxis = list(title = "Minutes"),
-      margin = list(l = 50, r = 20, t = 50, b = 40),
-      hoverlabel = list(bgcolor = clr$bg),
-      legend = list(
-        orientation = "h",
-        yanchor = "bottom",
-        y = -0.15,
-        xanchor = "center",
-        x = 0.5
-      )
-    ) %>%
-    style(
-      marker = list(
-        color = ~ifelse(sleep_stage == "Deep", clr$deep,
-                 ifelse(sleep_stage == "REM", clr$rem,
-                 ifelse(sleep_stage == "Light", clr$light,
-                 clr$wake)))
-      )
-    )
-} else {
-  create_empty_plot("No sleep data available")
-}
-
-# ===== FOR APP.R: Add to UI =====
-# Check previous chart ^ for fullscreen code
-# ===== FOR APP.R: Wrap in renderPlotly =====
-# output$sleep_stages_chart <- renderPlotly({
-#   req(sleep_data())
-#
-#   stacked_data <- sleep_data() %>%
-#     filter(sleep_stage %in% c("deep", "rem", "light", "wake")) %>%
-#     group_by(dateOfSleep, sleep_stage) %>%
-#     summarise(minutes = n(), .groups = "drop") %>%
-#     mutate(
-#       sleep_stage = recode(sleep_stage,
-#                           deep = "Deep",
-#                           rem = "REM",
-#                           light = "Light",
-#                           wake = "Wake"),
-#       dateOfSleep = as.Date(dateOfSleep)
-#     )
-#
-#   if (nrow(stacked_data) == 0) {
-#     return(create_empty_plot("No sleep data available for selected filters"))
-#   }
-#
-#   # Use ggplotly with explicit style() to preserve colors
-#   p <- ggplot(stacked_data, aes(x = dateOfSleep, y = minutes, fill = sleep_stage)) +
-#     geom_col(width = 0.7, alpha = 0.9) +
-#     scale_fill_manual(values = c(Deep = clr$deep, REM = clr$rem, Light = clr$light, Wake = clr$wake)) +
-#     scale_x_date(date_labels = "%b %d") +
-#     labs(x = NULL, y = "Minutes") +
-#     theme_minimal() +
-#     theme(
-#       legend.position = "bottom",
-#       plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
-#       panel.grid.major = element_line(color = clr$grid_line, linewidth = 0.3),
-#       panel.grid.minor = element_blank()
-#     )
-#
-#   ggplotly(p, tooltip = c("x", "y", "fill")) %>%
-#     layout(
-#       title = list(text = "Sleep Stages per Night", x = 0.5),
-#       xaxis = list(title = ""),
-#       yaxis = list(title = "Minutes"),
-#       margin = list(l = 50, r = 20, t = 50, b = 40),
-#       hoverlabel = list(bgcolor = clr$bg),
-#       legend = list(
-#         orientation = "h",
-#         yanchor = "bottom",
-#         y = -0.15,
-#         xanchor = "center",
-#         x = 0.5
-#       )
-#     ) %>%
-#     style(
-#       marker = list(
-#         color = ~ifelse(sleep_stage == "Deep", clr$deep,
-#                  ifelse(sleep_stage == "REM", clr$rem,
-#                  ifelse(sleep_stage == "Light", clr$light,
-#                  clr$wake)))
-#       )
-#     )
-# })
-```
-
-### Multiple Sleep Sessions per Day (Segmented Bar) ❌Broken
-
-This stacked bar chart visualizes the distribution of sleep stages (Deep, REM, Light, and Wake) across different sleep sessions, with each bar representing a distinct period of sleep on a given day. It answers questions like "How many distinct sleep sessions occurred each day?", "What's the composition of each sleep session in terms of sleep stages?", and "How does sleep quality differ between multiple sleep sessions on the same day?"
-
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
-# ===== MULTIPLE SLEEP SESSIONS PER DAY =====
-if (exists("sleep_data") && !is.null(sleep_data) && nrow(sleep_data) > 0) {
-  
-  # The 'datetime' column already contains the sleep minute timestamps
-  sleep_clean <- sleep_data %>%
-    mutate(
-      datetime = ymd_hms(datetime),  # Parse the sleep datetime
-      dateOfSleep = as.Date(dateOfSleep)
-    ) %>%
-    # Sort by date and time to identify gaps
-    arrange(dateOfSleep, datetime)
-  
-  # Identify sleep sessions based on time gaps (> 2 hours between records)
-  sleep_with_gaps <- sleep_clean %>%
-    group_by(dateOfSleep) %>%
-    arrange(datetime) %>%
-    mutate(
-      # Time difference from previous record in minutes
-      time_diff = ifelse(
-        is.na(lag(datetime)), 
-        0, 
-        as.numeric(difftime(datetime, lag(datetime), units = "mins"))
-      ),
-      # New session starts when gap > 120 minutes (2 hours)
-      new_session = ifelse(
-        is.na(lag(datetime)) | time_diff > 120,
-        1,
-        0
-      ),
-      # Create session ID within each day
-      session_id = cumsum(new_session)
-    ) %>%
-    ungroup()
-  
-  # Aggregate by session and sleep stage
-  session_data <- sleep_with_gaps %>%
-    filter(sleep_stage %in% c("deep", "rem", "light", "wake")) %>%
-    group_by(dateOfSleep, session_id, sleep_stage) %>%
-    summarise(
-      minutes = n(),
-      .groups = "drop"
-    ) %>%
-    mutate(
-      sleep_stage = recode(sleep_stage,
-                          deep = "Deep",
-                          rem = "REM", 
-                          light = "Light",
-                          wake = "Wake"),
-      # Create session label
-      session_label = paste(
-        format(dateOfSleep, "%b %d"),
-        "-",
-        paste0("Session ", session_id)
-      )
-    )
-  
-  # Check if we have data
-  if (nrow(session_data) > 0) {
-    
-    # Get distinct sessions in chronological order
-    sessions <- session_data %>%
-      group_by(dateOfSleep, session_id, session_label) %>%
-      summarise(.groups = "drop") %>%
-      arrange(dateOfSleep, session_id) %>%
-      pull(session_label)
-    
-    # Convert to factor to maintain order
-    session_data <- session_data %>%
-      mutate(session_label = factor(session_label, levels = sessions))
-    
-    # Create the plot
-    plot_ly(
-      data = session_data,
-      x = ~session_label,
-      y = ~minutes,
-      color = ~sleep_stage,
-      colors = c(Deep = clr$deep, REM = clr$rem, Light = clr$light, Wake = clr$wake),
-      type = "bar",
-      hovertemplate = paste(
-        "<b>%{x}</b><br>",
-        "%{data.name}: %{y} minutes<br>",
-        "<extra></extra>"
-      )
-    ) %>%
-      layout(
-        barmode = "stack",
-        title = list(text = "Sleep Sessions per Day", x = 0.5),
-        xaxis = list(
-          title = "",
-          tickangle = -45,
-          tickfont = list(size = 10)
-        ),
-        yaxis = list(title = "Minutes"),
-        margin = list(l = 50, r = 20, t = 50, b = 100),
-        hoverlabel = list(bgcolor = clr$bg),
-        legend = list(
-          orientation = "h",
-          yanchor = "bottom",
-          y = -0.15,
-          xanchor = "center",
-          x = 0.5,
-          bgcolor = "rgba(255,255,255,0.8)"
-        )
-      )
-  } else {
-    create_empty_plot("No sleep stage data available for sessions")
-  }
-  
-} else {
-  create_empty_plot("No sleep data available")
-}
-```
-
-### Sleep Latency
+### 31. Sleep Latency
 
 Tells you how long it takes you to fall asleep.
 
@@ -2057,6 +1960,250 @@ if (exists("sleep_data") && !is.null(sleep_data) && nrow(sleep_data) > 0) {
         )
       )
     )
+  
+} else {
+  create_empty_plot("No sleep data available")
+}
+```
+
+### 32. Sleep Stage per Night
+
+Daily breakdown showing minutes in EACH stage per night. How does my sleep composition change night-to-night?
+
+Note: We should label the minutes.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# ===== SLEEP STAGE STACKED BARS PER NIGHT =====
+if (exists("sleep_data") && !is.null(sleep_data) && nrow(sleep_data) > 0) {
+  stacked_data <- sleep_data %>%
+    filter(sleep_stage %in% c("deep", "rem", "light", "wake")) %>%
+    group_by(dateOfSleep, sleep_stage) %>%
+    summarise(minutes = n(), .groups = "drop") %>%
+    mutate(
+      sleep_stage = recode(sleep_stage,
+                          deep = "Deep",
+                          rem = "REM",
+                          light = "Light",
+                          wake = "Wake"),
+      dateOfSleep = as.Date(dateOfSleep)
+    )
+  
+  # Use ggplotly with explicit style() to preserve colors
+  p <- ggplot(stacked_data, aes(x = dateOfSleep, y = minutes, fill = sleep_stage)) +
+    geom_col(width = 0.7, alpha = 0.9) +
+    scale_fill_manual(values = c(Deep = clr$deep, REM = clr$rem, Light = clr$light, Wake = clr$wake)) +
+    scale_x_date(date_labels = "%b %d") +
+    labs(x = NULL, y = "Minutes") +
+    theme_minimal() +
+    theme(
+      legend.position = "bottom",
+      plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+      panel.grid.major = element_line(color = clr$grid_line, linewidth = 0.3),
+      panel.grid.minor = element_blank()
+    )
+  
+  ggplotly(p, tooltip = c("x", "y", "fill")) %>%
+    layout(
+      title = list(text = "Sleep Stages per Night", x = 0.5),
+      xaxis = list(title = ""),
+      yaxis = list(title = "Minutes"),
+      margin = list(l = 50, r = 20, t = 50, b = 40),
+      hoverlabel = list(bgcolor = clr$bg),
+      legend = list(
+        orientation = "h",
+        yanchor = "bottom",
+        y = -0.15,
+        xanchor = "center",
+        x = 0.5
+      )
+    ) %>%
+    style(
+      marker = list(
+        color = ~ifelse(sleep_stage == "Deep", clr$deep,
+                 ifelse(sleep_stage == "REM", clr$rem,
+                 ifelse(sleep_stage == "Light", clr$light,
+                 clr$wake)))
+      )
+    )
+} else {
+  create_empty_plot("No sleep data available")
+}
+
+# ===== FOR APP.R: Add to UI =====
+# Check previous chart ^ for fullscreen code
+# ===== FOR APP.R: Wrap in renderPlotly =====
+# output$sleep_stages_chart <- renderPlotly({
+#   req(sleep_data())
+#
+#   stacked_data <- sleep_data() %>%
+#     filter(sleep_stage %in% c("deep", "rem", "light", "wake")) %>%
+#     group_by(dateOfSleep, sleep_stage) %>%
+#     summarise(minutes = n(), .groups = "drop") %>%
+#     mutate(
+#       sleep_stage = recode(sleep_stage,
+#                           deep = "Deep",
+#                           rem = "REM",
+#                           light = "Light",
+#                           wake = "Wake"),
+#       dateOfSleep = as.Date(dateOfSleep)
+#     )
+#
+#   if (nrow(stacked_data) == 0) {
+#     return(create_empty_plot("No sleep data available for selected filters"))
+#   }
+#
+#   # Use ggplotly with explicit style() to preserve colors
+#   p <- ggplot(stacked_data, aes(x = dateOfSleep, y = minutes, fill = sleep_stage)) +
+#     geom_col(width = 0.7, alpha = 0.9) +
+#     scale_fill_manual(values = c(Deep = clr$deep, REM = clr$rem, Light = clr$light, Wake = clr$wake)) +
+#     scale_x_date(date_labels = "%b %d") +
+#     labs(x = NULL, y = "Minutes") +
+#     theme_minimal() +
+#     theme(
+#       legend.position = "bottom",
+#       plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+#       panel.grid.major = element_line(color = clr$grid_line, linewidth = 0.3),
+#       panel.grid.minor = element_blank()
+#     )
+#
+#   ggplotly(p, tooltip = c("x", "y", "fill")) %>%
+#     layout(
+#       title = list(text = "Sleep Stages per Night", x = 0.5),
+#       xaxis = list(title = ""),
+#       yaxis = list(title = "Minutes"),
+#       margin = list(l = 50, r = 20, t = 50, b = 40),
+#       hoverlabel = list(bgcolor = clr$bg),
+#       legend = list(
+#         orientation = "h",
+#         yanchor = "bottom",
+#         y = -0.15,
+#         xanchor = "center",
+#         x = 0.5
+#       )
+#     ) %>%
+#     style(
+#       marker = list(
+#         color = ~ifelse(sleep_stage == "Deep", clr$deep,
+#                  ifelse(sleep_stage == "REM", clr$rem,
+#                  ifelse(sleep_stage == "Light", clr$light,
+#                  clr$wake)))
+#       )
+#     )
+# })
+```
+
+### Multiple Sleep Sessions per Day ❌
+
+This stacked segmented bar chart visualizes the distribution of sleep stages (Deep, REM, Light, and Wake) across different sleep sessions, with each bar representing a distinct period of sleep on a given day. It answers questions like "How many distinct sleep sessions occurred each day?", "What's the composition of each sleep session in terms of sleep stages?", and "How does sleep quality differ between multiple sleep sessions on the same day?"
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# ===== MULTIPLE SLEEP SESSIONS PER DAY =====
+if (exists("sleep_data") && !is.null(sleep_data) && nrow(sleep_data) > 0) {
+  
+  # The 'datetime' column already contains the sleep minute timestamps
+  sleep_clean <- sleep_data %>%
+    mutate(
+      datetime = ymd_hms(datetime),  # Parse the sleep datetime
+      dateOfSleep = as.Date(dateOfSleep)
+    ) %>%
+    # Sort by date and time to identify gaps
+    arrange(dateOfSleep, datetime)
+  
+  # Identify sleep sessions based on time gaps (> 2 hours between records)
+  sleep_with_gaps <- sleep_clean %>%
+    group_by(dateOfSleep) %>%
+    arrange(datetime) %>%
+    mutate(
+      # Time difference from previous record in minutes
+      time_diff = ifelse(
+        is.na(lag(datetime)), 
+        0, 
+        as.numeric(difftime(datetime, lag(datetime), units = "mins"))
+      ),
+      # New session starts when gap > 120 minutes (2 hours)
+      new_session = ifelse(
+        is.na(lag(datetime)) | time_diff > 120,
+        1,
+        0
+      ),
+      # Create session ID within each day
+      session_id = cumsum(new_session)
+    ) %>%
+    ungroup()
+  
+  # Aggregate by session and sleep stage
+  session_data <- sleep_with_gaps %>%
+    filter(sleep_stage %in% c("deep", "rem", "light", "wake")) %>%
+    group_by(dateOfSleep, session_id, sleep_stage) %>%
+    summarise(
+      minutes = n(),
+      .groups = "drop"
+    ) %>%
+    mutate(
+      sleep_stage = recode(sleep_stage,
+                          deep = "Deep",
+                          rem = "REM", 
+                          light = "Light",
+                          wake = "Wake"),
+      # Create session label
+      session_label = paste(
+        format(dateOfSleep, "%b %d"),
+        "-",
+        paste0("Session ", session_id)
+      )
+    )
+  
+  # Check if we have data
+  if (nrow(session_data) > 0) {
+    
+    # Get distinct sessions in chronological order
+    sessions <- session_data %>%
+      group_by(dateOfSleep, session_id, session_label) %>%
+      summarise(.groups = "drop") %>%
+      arrange(dateOfSleep, session_id) %>%
+      pull(session_label)
+    
+    # Convert to factor to maintain order
+    session_data <- session_data %>%
+      mutate(session_label = factor(session_label, levels = sessions))
+    
+    # Create the plot
+    plot_ly(
+      data = session_data,
+      x = ~session_label,
+      y = ~minutes,
+      color = ~sleep_stage,
+      colors = c(Deep = clr$deep, REM = clr$rem, Light = clr$light, Wake = clr$wake),
+      type = "bar",
+      hovertemplate = paste(
+        "<b>%{x}</b><br>",
+        "%{data.name}: %{y} minutes<br>",
+        "<extra></extra>"
+      )
+    ) %>%
+      layout(
+        barmode = "stack",
+        title = list(text = "Sleep Sessions per Day", x = 0.5),
+        xaxis = list(
+          title = "",
+          tickangle = -45,
+          tickfont = list(size = 10)
+        ),
+        yaxis = list(title = "Minutes"),
+        margin = list(l = 50, r = 20, t = 50, b = 100),
+        hoverlabel = list(bgcolor = clr$bg),
+        legend = list(
+          orientation = "h",
+          yanchor = "bottom",
+          y = -0.15,
+          xanchor = "center",
+          x = 0.5,
+          bgcolor = "rgba(255,255,255,0.8)"
+        )
+      )
+  } else {
+    create_empty_plot("No sleep stage data available for sessions")
+  }
   
 } else {
   create_empty_plot("No sleep data available")

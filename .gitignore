@@ -16,6 +16,8 @@ renv/sandbox/
 # Data Files
 csvdata/*
 !csvdata/.gitkeep
+csvdata_mock_merged/*
+!csvdata/.gitkeep
 xlsx_source/*
 !xlsx_source/.gitkeep
 notes_salome.txt
