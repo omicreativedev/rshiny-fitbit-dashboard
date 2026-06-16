@@ -481,8 +481,16 @@ if (exists("sleep_summary") && !is.null(sleep_summary) && nrow(sleep_summary) > 
         yanchor = "bottom",          # Anchor at bottom
         y = -0.15,                   # Position below chart (adjust as needed)
         xanchor = "center",          # Center horizontally
-        x = 0.5,                     # Center position
-        bgcolor = "rgba(255,255,255,0.8)"  # Semi-transparent background
+        x = 0.5                     # Center position
+        #bgcolor = "rgba(255,255,255,0.8)"  # Semi-transparent background
+      )
+    ) %>%
+    # ADD THIS: Explicitly set colors in Plotly
+    style(
+      marker = list(
+        color = ~ifelse(sleep_stage == "Deep", clr$deep,
+                 ifelse(sleep_stage == "REM", clr$rem,
+                 clr$light))
       )
     )
 } else {
@@ -527,7 +535,7 @@ if (exists("sleep_summary") && !is.null(sleep_summary) && nrow(sleep_summary) > 
 #   
 #   ggplotly(p) %>% 
 #     layout(
-#       hoverlabel = list(bgcolor = clr$bg),  # Remove quotes!
+#       hoverlabel = list(bgcolor = clr$bg),
 #       title = list(text = "Daily Sleep States", x = 0.5),
 #       margin = list(l = 50, r = 20, t = 50, b = 40),
 #       legend = list(
@@ -537,6 +545,14 @@ if (exists("sleep_summary") && !is.null(sleep_summary) && nrow(sleep_summary) > 
 #         xanchor = "center",
 #         x = 0.5,
 #         bgcolor = "rgba(255,255,255,0.8)"
+#       )
+#     ) %>%
+#     # ADD THIS: Explicitly set colors in Plotly
+#     style(
+#       marker = list(
+#         color = ~ifelse(sleep_stage == "Deep", clr$deep,
+#                  ifelse(sleep_stage == "REM", clr$rem,
+#                  clr$light))
 #       )
 #     )
 # })
