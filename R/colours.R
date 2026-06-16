@@ -35,13 +35,21 @@ clr <- list(
   cardio   = okabe_ito["yellow"],
   peak     = okabe_ito["vermillion"],
   
+  # Mix/Max/Avg/etc.
+  avg       = okabe_ito["vermillion"],   
+  min     = okabe_ito["green"],         
+  sum    = okabe_ito["lightblue"],   
+  max     = okabe_ito["orange"],       
+       
+  
   # UI text (grays from palette)
   text_primary   = okabe_ito["black"],
   text_secondary = okabe_ito["grey"],
   
   # Reference lines
   target_line = okabe_ito["grey"],
-  grid_line = okabe_ito["lightgrey"]
+  grid_line = okabe_ito["lightgrey"],
+  error_bar = okabe_ito["grey"]
 )
 
 # Helper for custom color orders
