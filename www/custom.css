@@ -1,130 +1,47 @@
 /* www/custom.css – Fitbit Dashboard UI styles */
+/* Light mode (default) - UI only, charts use Okabe-Ito colors */
 
 body {
   font-family: 'Inter', sans-serif;
   background: #F8F9FB;
 }
 
-.top-bar {
+/* Cards and containers */
+.top-bar, .login-section, .filters-row, .metric-card, .chart-card {
   background: white;
-  border-bottom: 1px solid #E5E7EB;
-  padding: 14px 28px;
-}
-
-.top-bar h3 {
-  margin: 0;
-  font-size: 17px;
-  font-weight: 600;
-}
-
-.top-bar p {
-  margin: 0;
-  font-size: 12px;
-  color: #6B7280;
-}
-
-/* Login section - inline layout */
-.login-section {
-  background: white;
-  border-bottom: 1px solid #E5E7EB;
-  padding: 8px 28px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 20px;
-}
-
-.login-form {
-  display: flex;
-  gap: 10px;
-  align-items: flex-end;
-}
-
-.login-form .shiny-input-container {
-  margin-bottom: 0;
-}
-
-.user-info {
-  font-size: 13px;
-  color: #6B7280;
-}
-
-/* Filters row - horizontal layout */
-.filters-row {
-  background: white;
-  border-bottom: 1px solid #E5E7EB;
-  padding: 10px 28px;
-  display: flex;
-  gap: 30px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.filters-row .shiny-input-container {
-  margin-bottom: 0;
-}
-
-.admin-selector {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.admin-selector label {
-  margin-bottom: 0;
-  font-size: 13px;
-  font-weight: normal;
-}
-
-/* Main container */
-.main-container {
-  padding: 20px 28px;
-}
-
-/* Compact metric cards */
-.metric-card {
-  background: white;
-  border-radius: 10px;
-  padding: 10px 15px;
   border: 1px solid #E5E7EB;
-  text-align: center;
 }
 
-.metric-label {
-  font-size: 10px;
-  color: #6B7280;
-  margin-bottom: 4px;
-  letter-spacing: 0.5px;
-}
+.top-bar { border-bottom: 1px solid #E5E7EB; }
+.login-section { border-bottom: 1px solid #E5E7EB; }
+.filters-row { border-bottom: 1px solid #E5E7EB; }
 
-.metric-value {
-  margin: 0;
-  font-size: 28px;
-  font-weight: 600;
-  line-height: 1.2;
-}
+/* Typography */
+.top-bar h3 { margin: 0; font-size: 17px; font-weight: 600; }
+.top-bar p { margin: 0; font-size: 12px; color: #6B7280; }
+.user-info { font-size: 13px; color: #6B7280; }
 
-.metric-unit {
-  font-size: 10px;
-  color: #6B7280;
-  margin-top: 4px;
-}
+/* Layout containers */
+.main-container { padding: 20px 28px; }
+
+/* Metric cards */
+.metric-card { border-radius: 10px; padding: 10px 15px; text-align: center; }
+.metric-label { font-size: 10px; color: #6B7280; margin-bottom: 4px; letter-spacing: 0.5px; }
+.metric-value { margin: 0; font-size: 28px; font-weight: 600; line-height: 1.2; }
+.metric-unit { font-size: 10px; color: #6B7280; margin-top: 4px; }
 
 /* Chart cards */
-.chart-card {
-  background: white;
-  border-radius: 10px;
-  padding: 12px 15px;
-  border: 1px solid #E5E7EB;
-  margin-bottom: 14px;
-}
+.chart-card { border-radius: 10px; padding: 12px 15px; margin-bottom: 14px; }
+.chart-title { font-size: 13px; font-weight: 600; margin-bottom: 10px; }
+.placeholder-text { color: #9CA3AF; }
 
-.chart-title {
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 10px;
-}
+/* Filters row */
+.filters-row { display: flex; gap: 30px; align-items: center; flex-wrap: wrap; }
+.filters-row .shiny-input-container { margin-bottom: 0; }
+.admin-selector { display: flex; align-items: center; gap: 10px; }
+.admin-selector label { margin-bottom: 0; font-size: 13px; font-weight: normal; }
 
-.placeholder-text {
-  color: #9CA3AF;
-}
+/* Login section */
+.login-section { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+.login-form { display: flex; gap: 10px; align-items: flex-end; }
+.login-form .shiny-input-container { margin-bottom: 0; }
