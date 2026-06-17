@@ -14,8 +14,6 @@ renv/sandbox/
 .positai
 
 # Data Files
-csvdata/*
-!csvdata/.gitkeep
 csvdata_mock_merged/*
 !csvdata/.gitkeep
 xlsx_source/*
