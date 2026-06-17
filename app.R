@@ -1,6 +1,7 @@
 # ==============================================================================
 # Fitbit Research Dashboard
 # STARS Program - Physiological & Psychological Effects of Discrimination
+# Salome's Version
 # Boston University Labs
 # ==============================================================================
 # This dashboard provides visualization and analysis of Fitbit data for 
@@ -12,6 +13,9 @@
 # ==============================================================================
 
 # Load required libraries
+library(bslib)           # popover() and tooltip()
+library(shinyWidgets)    # dropdownButton(), panel(), etc.
+library(shinyBS)         # bsCollapse(), bsCollapsePanel()
 library(shiny)           # Web application framework
 library(shinyjs)         # For showing/hiding UI elements
 library(tidyverse)       # Data manipulation (dplyr, ggplot2, etc.)
@@ -852,6 +856,17 @@ server <- function(input, output, session) {
         column(12, div(class = "chart-card",
                        p("Breathing Rate During Sleep", class = "chart-title"),
                        plotlyOutput("breathing_rate_chart", height = "300px")))
+      ),
+      fluidRow(
+        column(12, div(class = "chart-card",
+                       p("Hypnogram", class = "chart-title"),
+                       selectInput("hypnogram_date", "Select night:", choices = NULL, width = "200px"),
+                       plotlyOutput("hypnogram_chart", height = "300px")))
+      ),
+      fluidRow(
+        column(12, div(class = "chart-card",
+                       p("Sleep Efficiency", class = "chart-title"),
+                       plotlyOutput("sleep_efficiency_chart", height = "300px")))
       )
     )
   }
@@ -1109,35 +1124,445 @@ server <- function(input, output, session) {
     create_empty_plot("Activity levels chart coming soon")
   })
   
+  ### Heart Rate Time Series 
   output$hr_timeseries <- renderPlotly({
     req(auth$logged_in)
-    create_empty_plot("Heart rate time series coming soon")
+    df <- hr_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No heart rate data available"))
+    }
+    
+    if (input$view_mode == "day") {
+      chart_data <- df %>%
+        group_by(study_day) %>%
+        summarise(heart_rate_avg = mean(heart_rate_avg, na.rm = TRUE), .groups = "drop")
+      
+      p <- ggplot(chart_data, aes(x = study_day, y = heart_rate_avg)) +
+        geom_line(color = clr$hr, linewidth = 0.8, alpha = 0.9) +
+        geom_point(color = clr$hr, size = 2.5, alpha = 0.9) +
+        labs(x = "Study Day", y = "Heart Rate (bpm)") +
+        scale_x_continuous(breaks = scales::pretty_breaks()) +
+        #scale_y_continuous(limits = c(55, 150), breaks = seq(40, 150, by = 20)) +
+        scale_y_continuous(breaks = scales::pretty_breaks(n = 6)) +
+        dash_theme()
+      
+    } else {
+      chart_data <- df %>%
+        filter(!is.na(datetime))
+      
+      p <- ggplot(chart_data, aes(x = datetime, y = heart_rate_avg)) +
+        geom_line(color = clr$hr, linewidth = 0.3, alpha = 0.5) +
+        geom_smooth(method = "loess", span = 0.1, se = FALSE,
+                    color = clr$hr, linewidth = 0.8) +
+        labs(x = "Date and Time", y = "Heart Rate (bpm)") +
+        scale_x_datetime(date_labels = "%b %d, %H:%M", date_breaks = "12 hours") +
+        #scale_y_continuous(limits = c(55, 150), breaks = seq(40, 150, by = 20)) +
+        scale_y_continuous(breaks = scales::pretty_breaks(n = 6)) +
+        dash_theme() +
+        theme(axis.text.x = element_text(size = 8))
+    }
+    
+    ggplotly(p, tooltip = c("x", "y")) %>%
+      layout(
+        xaxis = list(tickangle = -45),
+        hoverlabel = list(bgcolor = "white", font = list(size = 10)),
+        margin = list(l = 50, r = 20, t = 20, b = 60)
+      )
   })
+  #-------------------------------------------end hr time series
+  
+  # HR Distribution
   output$hr_distribution <- renderPlotly({
     req(auth$logged_in)
-    create_empty_plot("HR distribution coming soon")
+    df <- hr_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No heart rate data available"))
+    }
+    
+    if (input$view_mode == "day") {
+      p <- ggplot(df, aes(x = heart_rate_avg, fill = factor(study_day))) +
+        geom_histogram(alpha = 0.7, bins = 25, color = "white", linewidth = 0.2) +
+        labs(x = "bpm", y = "count", fill = "Study Day") +
+        dash_theme()
+    } else {
+      p <- ggplot(df, aes(x = heart_rate_avg)) +
+        geom_histogram(fill = clr$hr, alpha = 0.85, bins = 25,
+                       color = "white", linewidth = 0.2) +
+        labs(x = "bpm", y = "count") +
+        dash_theme()
+    }
+    
+    ggplotly(p) %>%
+      layout(hoverlabel = list(bgcolor = "white"),
+             margin = list(l = 50, r = 20, t = 20, b = 40))
   })
+  #------------------end HR distribution
+  
+  
+  # BY HOUR
   output$hr_by_hour <- renderPlotly({
     req(auth$logged_in)
-    create_empty_plot("HR by hour coming soon")
+    df <- hr_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No heart rate data available"))
+    }
+    
+    if (input$view_mode == "day") {
+      chart_data <- df %>%
+        filter(!is.na(datetime)) %>%
+        mutate(hour_of_day = hour(datetime)) %>%
+        group_by(study_day, hour_of_day) %>%
+        summarise(avg_heart_rate = mean(heart_rate_avg, na.rm = TRUE), .groups = "drop")
+      
+      p <- ggplot(chart_data, aes(x = hour_of_day, y = avg_heart_rate,
+                                  color = factor(study_day), group = factor(study_day))) +
+        geom_line(linewidth = 0.8, alpha = 0.8) +
+        geom_point(size = 1.5, alpha = 0.7) +
+        labs(x = "Hour of Day", y = "Average Heart Rate (bpm)", color = "Study Day") +
+        scale_x_continuous(breaks = seq(0, 23, by = 2),
+                           labels = sprintf("%02d:00", seq(0, 23, by = 2))) +
+        dash_theme() +
+        theme(axis.text.x = element_text(size = 8))
+    } else {
+      chart_data <- df %>%
+        filter(!is.na(datetime)) %>%
+        mutate(hour_of_day = hour(datetime)) %>%
+        group_by(hour_of_day) %>%
+        summarise(
+          avg_heart_rate = mean(heart_rate_avg, na.rm = TRUE),
+          sd_heart_rate  = sd(heart_rate_avg, na.rm = TRUE),
+          .groups = "drop"
+        )
+      
+      p <- ggplot(chart_data, aes(x = hour_of_day, y = avg_heart_rate)) +
+        geom_col(fill = clr$hr, width = 0.7, alpha = 0.8) +
+        geom_errorbar(aes(ymin = avg_heart_rate - sd_heart_rate,
+                          ymax = avg_heart_rate + sd_heart_rate),
+                      width = 0.3, color = "#6B7280", linewidth = 0.4) +
+        labs(x = "Hour of Day", y = "Average Heart Rate (bpm)") +
+        scale_x_continuous(breaks = seq(0, 23, by = 2),
+                           labels = sprintf("%02d:00", seq(0, 23, by = 2))) +
+        dash_theme() +
+        theme(axis.text.x = element_text(size = 8),
+              panel.grid.major.x = element_blank())
+    }
+    
+    ggplotly(p, tooltip = c("x", "y")) %>%
+      layout(hoverlabel = list(bgcolor = "white"),
+             margin = list(l = 50, r = 20, t = 20, b = 60))
   })
+  #------------------------- end by hour
+  
+  
+  #hrv --------------
   output$hrv_chart <- renderPlotly({
     req(auth$logged_in)
-    create_empty_plot("HRV chart coming soon")
+    df <- hrv_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No HRV data available"))
+    }
+    
+    if (input$view_mode == "day") {
+      chart_data <- df %>%
+        filter(!is.na(rmssd_ms)) %>%
+        group_by(study_day) %>%
+        summarise(rmssd_ms = mean(rmssd_ms, na.rm = TRUE), .groups = "drop")
+      
+      p <- ggplot(chart_data, aes(x = study_day, y = rmssd_ms)) +
+        geom_line(color = clr$hrv, linewidth = 0.8) +
+        geom_point(color = clr$hrv, size = 3, alpha = 0.9) +
+        scale_x_continuous(breaks = scales::pretty_breaks()) +
+        labs(x = "Study Day", y = "RMSSD (ms)") +
+        dash_theme()
+    } else {
+      chart_data <- df %>%
+        filter(!is.na(rmssd_ms), !is.na(datetime))
+      
+      p <- ggplot(chart_data, aes(x = datetime, y = rmssd_ms)) +
+        geom_line(color = clr$hrv, linewidth = 0.6, alpha = 0.85) +
+        geom_point(size = 1.5, color = clr$hrv, alpha = 0.7) +
+        labs(x = NULL, y = "RMSSD (ms)") +
+        dash_theme()
+    }
+    
+    ggplotly(p) %>%
+      layout(hoverlabel = list(bgcolor = "white"),
+             margin = list(l = 50, r = 20, t = 20, b = 40))
   })
+  # end hrv
   
+  #--------------------SLEEP TAB
+  
+  # Sleep duration
   output$sleep_duration <- renderPlotly({
     req(auth$logged_in)
-    create_empty_plot("Sleep duration coming soon")
+    df <- sleep_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No sleep data available"))
+    }
+    
+    if (input$view_mode == "day") {
+      sleep_dur <- df %>%
+        filter(sleep_stage %in% c("deep", "rem", "light", "wake")) %>%
+        group_by(study_day) %>%
+        summarise(total_minutes = n(), .groups = "drop")
+      
+      p <- ggplot(sleep_dur, aes(x = study_day, y = total_minutes)) +
+        geom_col(fill = clr$deep, width = 0.7, alpha = 0.85) +
+        #geom_point(color = clr$deep, size = 2.5) +
+        scale_x_continuous(breaks = scales::pretty_breaks()) +
+        scale_y_continuous(breaks = scales::pretty_breaks()) +
+        labs(x = "Study Day", y = "Minutes") +
+        dash_theme()
+    } else {
+      sleep_dur <- df %>%
+        filter(sleep_stage %in% c("deep", "rem", "light", "wake")) %>%
+        group_by(dateOfSleep) %>%
+        summarise(total_minutes = n(), .groups = "drop") %>%
+        mutate(dateOfSleep = as.Date(dateOfSleep))
+      
+      if (nrow(sleep_dur) == 0) {
+        return(create_empty_plot("No sleep duration data available"))
+      }
+      
+      p <- ggplot(sleep_dur, aes(x = dateOfSleep, y = total_minutes)) +
+        geom_col(fill = clr$deep, width = 0.7, alpha = 0.85) +
+        scale_x_date(date_labels = "%b %d") +
+        scale_y_continuous(breaks = scales::pretty_breaks()) +
+        labs(x = NULL, y = "Minutes") +
+        dash_theme()
+    }
+    
+    ggplotly(p) %>%
+      layout(hoverlabel = list(bgcolor = "white"),
+             margin = list(l = 50, r = 20, t = 20, b = 40))
   })
+  
+  # Sleep Stage
   output$sleep_stage_pie <- renderPlotly({
     req(auth$logged_in)
-    create_empty_plot("Sleep stage distribution coming soon")
+    df <- sleep_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No sleep data available"))
+    }
+    
+    stage_dist <- df %>%
+      filter(sleep_stage %in% c("deep", "rem", "light", "wake")) %>%
+      group_by(sleep_stage) %>%
+      summarise(minutes = n(), .groups = "drop") %>%
+      mutate(sleep_stage = recode(sleep_stage,
+                                  deep = "Deep", rem = "REM",
+                                  light = "Light", wake = "Wake"))
+    
+    if (nrow(stage_dist) == 0) {
+      return(create_empty_plot("No sleep stage data available"))
+    }
+    
+    plot_ly(
+      data = stage_dist, labels = ~sleep_stage, values = ~minutes,
+      type = "pie", hole = 0.6,
+      textinfo = "label+percent",
+      hoverinfo = "label+value+percent",
+      marker = list(colors = c(Deep = clr$deep, REM = clr$rem,
+                               Light = clr$light, Wake = clr$wake)[stage_dist$sleep_stage])
+    ) %>%
+      layout(
+        showlegend = TRUE,
+        legend = list(orientation = "h", yanchor = "bottom", y = -0.2,
+                      xanchor = "center", x = 0.5),
+        margin = list(l = 20, r = 20, t = 20, b = 20)
+      )
   })
+  
+  # Breathing Rate
   output$breathing_rate_chart <- renderPlotly({
     req(auth$logged_in)
-    create_empty_plot("Breathing rate coming soon")
+    df <- breathing_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No breathing rate data available"))
+    }
+    
+    if (input$view_mode == "day") {
+      d <- df %>%
+        filter(!is.na(study_day)) %>%
+        select(study_day, full_sleep_breathing_rate, deep_sleep_breathing_rate,
+               light_sleep_breathing_rate, rem_sleep_breathing_rate) %>%
+        pivot_longer(-study_day, names_to = "stage", values_to = "bpm") %>%
+        filter(!is.na(bpm)) %>%
+        mutate(stage = recode(stage,
+                              full_sleep_breathing_rate = "Full Sleep",
+                              deep_sleep_breathing_rate = "Deep",
+                              light_sleep_breathing_rate = "Light",
+                              rem_sleep_breathing_rate = "REM"))
+      
+      p <- ggplot(d, aes(x = study_day, y = bpm, color = stage, group = stage)) +
+        geom_line(linewidth = 0.8) +
+        geom_point(size = 2) +
+        scale_color_manual(values = c(
+          "Full Sleep" = "#6B7280", Deep = clr$deep,
+          Light = clr$light, REM = clr$rem)) +
+        scale_x_continuous(breaks = scales::pretty_breaks()) +
+        scale_y_continuous(breaks = scales::pretty_breaks()) +
+        labs(x = "Study Day", y = "breaths/min") +
+        dash_theme()
+    } else {
+      d <- df %>%
+        mutate(date = as.Date(date)) %>%
+        select(date, full_sleep_breathing_rate, deep_sleep_breathing_rate,
+               light_sleep_breathing_rate, rem_sleep_breathing_rate) %>%
+        pivot_longer(-date, names_to = "stage", values_to = "bpm") %>%
+        filter(!is.na(bpm)) %>%
+        mutate(stage = recode(stage,
+                              full_sleep_breathing_rate = "Full Sleep",
+                              deep_sleep_breathing_rate = "Deep",
+                              light_sleep_breathing_rate = "Light",
+                              rem_sleep_breathing_rate = "REM"))
+      
+      p <- ggplot(d, aes(x = date, y = bpm, color = stage, group = stage)) +
+        geom_line(linewidth = 0.8) +
+        geom_point(size = 2) +
+        scale_color_manual(values = c(
+          "Full Sleep" = "#6B7280", Deep = clr$deep,
+          Light = clr$light, REM = clr$rem)) +
+        scale_x_date(date_labels = "%b %d") +
+        scale_y_continuous(breaks = scales::pretty_breaks()) +
+        labs(x = NULL, y = "breaths/min") +
+        dash_theme()
+    }
+    
+    ggplotly(p) %>%
+      layout(hoverlabel = list(bgcolor = "white"),
+             margin = list(l = 50, r = 20, t = 20, b = 40))
   })
+  
+  # Populate hypnogram night dropdown
+  observe({
+    df <- sleep_data()
+    if (is.null(df) || nrow(df) == 0) return()
+    nights <- sort(unique(df$dateOfSleep), decreasing = TRUE)
+    updateSelectInput(session, "hypnogram_date", choices = nights, selected = nights[1])
+  })
+  
+  output$hypnogram_chart <- renderPlotly({
+    req(auth$logged_in)
+    df <- sleep_data()
+    req(input$hypnogram_date)
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No sleep data available"))
+    }
+    
+    target_date <- as.Date(input$hypnogram_date)
+    
+    hypnogram_data <- df %>%
+      filter(dateOfSleep == target_date,
+             sleep_stage %in% c("wake", "light", "deep", "rem", "asleep")) %>%
+      mutate(
+        datetime_utc = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+        time_num = hour(datetime_utc) + minute(datetime_utc) / 60,
+        stage_numeric = case_when(
+          sleep_stage == "wake"                  ~ 4,
+          sleep_stage == "rem"                   ~ 3,
+          sleep_stage %in% c("light", "asleep") ~ 2,
+          sleep_stage == "deep"                  ~ 1
+        ),
+        stage_label = case_when(
+          sleep_stage == "wake"   ~ "Wake",
+          sleep_stage == "rem"    ~ "REM",
+          sleep_stage == "light"  ~ "Light",
+          sleep_stage == "deep"   ~ "Deep",
+          sleep_stage == "asleep" ~ "Asleep"
+        )
+      )
+    
+    if (nrow(hypnogram_data) == 0) {
+      return(create_empty_plot(paste("No sleep stage data for", target_date)))
+    }
+    
+    plot_ly() %>%
+      add_lines(data = hypnogram_data, x = ~time_num, y = ~stage_numeric,
+                line = list(color = "#1A1A2E", width = 2),
+                showlegend = FALSE, hoverinfo = "skip") %>%
+      add_markers(data = hypnogram_data, x = ~time_num, y = ~stage_numeric,
+                  color = ~stage_label,
+                  colors = c(Wake = clr$wake, REM = clr$rem, Light = clr$light,
+                             Deep = clr$deep, Asleep = "#6B7280"),
+                  marker = list(size = 8, opacity = 0.7)) %>%
+      layout(
+        xaxis = list(title = "Time", tickmode = "array",
+                     tickvals = seq(0, 24, 4),
+                     ticktext = c("12 AM", "4 AM", "8 AM", "12 PM", "4 PM", "8 PM", "12 AM"),
+                     range = c(0, 24)),
+        yaxis = list(title = NULL, tickmode = "array",
+                     tickvals = c(1, 2, 3, 4),
+                     ticktext = c("Deep", "Light", "REM", "Wake"),
+                     range = c(0.5, 4.5)),
+        legend = list(orientation = "h", yanchor = "bottom", y = -0.3,
+                      xanchor = "center", x = 0.5),
+        margin = list(l = 60, r = 40, t = 20, b = 80)
+      )
+  })
+  
+  output$sleep_efficiency_chart <- renderPlotly({
+    req(auth$logged_in)
+    df <- sleep_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No sleep data available"))
+    }
+    
+    if (input$view_mode == "day") {
+      eff <- df %>%
+        group_by(study_day) %>%
+        summarise(
+          efficiency = round(sum(sleep_stage != "wake") / n() * 100, 1),
+          .groups = "drop"
+        )
+      
+      p <- ggplot(eff, aes(x = study_day, y = efficiency)) +
+        geom_line(color = clr$steps, linewidth = 1) +
+        geom_point(color = clr$steps, size = 3) +
+        geom_hline(yintercept = 85, linetype = "dashed", color = "#9CA3AF") +
+        scale_x_continuous(breaks = scales::pretty_breaks()) +
+        scale_y_continuous(breaks = scales::pretty_breaks()) +
+        labs(x = "Study Day", y = "Efficiency (%)") +
+        dash_theme()
+      
+      ggplotly(p) %>%
+        layout(hoverlabel = list(bgcolor = "white"),
+               margin = list(l = 50, r = 20, t = 20, b = 40))
+    } else {
+      eff <- df %>%
+        group_by(dateOfSleep) %>%
+        summarise(
+          efficiency = round(sum(sleep_stage != "wake") / n() * 100, 1),
+          .groups = "drop"
+        ) %>%
+        mutate(dateOfSleep = as.Date(dateOfSleep))
+      
+      if (nrow(eff) == 0) {
+        return(create_empty_plot("No sleep efficiency data available"))
+      }
+      
+      plot_ly() %>%
+        add_trace(data = eff, x = ~dateOfSleep, y = ~efficiency,
+                  type = "scatter", mode = "lines+markers",
+                  line = list(color = clr$steps, width = 2),
+                  marker = list(color = clr$steps, size = 8),
+                  name = "Efficiency") %>%
+        add_trace(x = range(eff$dateOfSleep), y = c(85, 85),
+                  type = "scatter", mode = "lines",
+                  line = list(color = "#9CA3AF", dash = "dash"),
+                  name = "Target (85%)") %>%
+        layout(
+          xaxis = list(title = "", tickformat = "%b %d"),
+          yaxis = list(title = "Efficiency (%)"),
+          legend = list(orientation = "h", xanchor = "center", x = 0.5, y = -0.2),
+          margin = list(l = 50, r = 20, t = 20, b = 60)
+        )
+    }
+  })
+  
+  
+  #----------------ACTIVITY TAB
   
   output$zone_minutes_chart <- renderPlotly({
     req(auth$logged_in)
