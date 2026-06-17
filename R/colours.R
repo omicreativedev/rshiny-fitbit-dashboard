@@ -5,7 +5,7 @@
 # Data colors - mapped to metrics
 clr <- list(
   hr       = "#D55E00",  # vermillion
-  hrv       = "#D55E00",  # vermillion
+  hrv      = "#D55E00",  # vermillion
   steps    = "#0072B2",  # blue
   deep     = "#009E73",  # green
   light    = "#56B4E9",  # lightblue
