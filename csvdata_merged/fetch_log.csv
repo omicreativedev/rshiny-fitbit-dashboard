@@ -1,0 +1,381 @@
+"datetime_fetch","participantID","date","endpoint_name","url","status_code","success","row_count","error_message"
+2026-06-08 03:17:24.147,"Salome",2026-05-28,"steps_intraday","https://health.googleapis.com/v4/users/me/dataTypes/steps/dataPoints?filter=steps.interval.start_time%20%3E%3D%20%222026-05-28T00%3A00%3A00Z%22%20AND%20steps.interval.start_time%20%3C%20%222026-05-29T00%3A00%3A00Z%22",200,1,100,NA
+2026-06-08 03:18:07.891,"Salome",2026-05-29,"steps_intraday","https://health.googleapis.com/v4/users/me/dataTypes/steps/dataPoints?filter=steps.interval.start_time%20%3E%3D%20%222026-05-29T00%3A00%3A00Z%22%20AND%20steps.interval.start_time%20%3C%20%222026-05-30T00%3A00%3A00Z%22",200,1,94,NA
+2026-06-08 03:18:43.108,"Salome",2026-05-30,"steps_intraday","https://health.googleapis.com/v4/users/me/dataTypes/steps/dataPoints?filter=steps.interval.start_time%20%3E%3D%20%222026-05-30T00%3A00%3A00Z%22%20AND%20steps.interval.start_time%20%3C%20%222026-05-31T00%3A00%3A00Z%22",200,1,43,NA
+2026-06-08 03:20:50.484,"Salome",2026-05-31,"steps_intraday","https://health.googleapis.com/v4/users/me/dataTypes/steps/dataPoints?filter=steps.interval.start_time%20%3E%3D%20%222026-05-31T00%3A00%3A00Z%22%20AND%20steps.interval.start_time%20%3C%20%222026-06-01T00%3A00%3A00Z%22",200,1,109,NA
+2026-06-08 03:20:58.568,"Salome",2026-06-01,"steps_intraday","https://health.googleapis.com/v4/users/me/dataTypes/steps/dataPoints?filter=steps.interval.start_time%20%3E%3D%20%222026-06-01T00%3A00%3A00Z%22%20AND%20steps.interval.start_time%20%3C%20%222026-06-02T00%3A00%3A00Z%22",200,1,108,NA
+2026-06-08 03:22:02.086,"Salome",2026-06-02,"steps_intraday","https://health.googleapis.com/v4/users/me/dataTypes/steps/dataPoints?filter=steps.interval.start_time%20%3E%3D%20%222026-06-02T00%3A00%3A00Z%22%20AND%20steps.interval.start_time%20%3C%20%222026-06-03T00%3A00%3A00Z%22",200,1,90,NA
+2026-06-08 03:28:58.541,"Salome",2026-06-03,"steps_intraday","https://health.googleapis.com/v4/users/me/dataTypes/steps/dataPoints?filter=steps.interval.start_time%20%3E%3D%20%222026-06-03T00%3A00%3A00Z%22%20AND%20steps.interval.start_time%20%3C%20%222026-06-04T00%3A00%3A00Z%22",200,1,138,NA
+2026-06-08 03:58:22.864,"Salome",2026-05-28,"sleep_minute","https://health.googleapis.com/v4/users/me/dataTypes/sleep/dataPoints",200,1,487,NA
+2026-06-08 04:03:36.393,"Salome",2026-05-30,"sleep_minute","https://health.googleapis.com/v4/users/me/dataTypes/sleep/dataPoints",200,1,628,NA
+2026-06-08 04:06:06.711,"Salome",2026-06-04,"steps_intraday","https://health.googleapis.com/v4/users/me/dataTypes/steps/dataPoints?filter=steps.interval.start_time%20%3E%3D%20%222026-06-04T00%3A00%3A00Z%22%20AND%20steps.interval.start_time%20%3C%20%222026-06-05T00%3A00%3A00Z%22",200,1,30,NA
+2026-06-08 04:10:26.688,"Salome",2026-06-05,"steps_intraday","https://health.googleapis.com/v4/users/me/dataTypes/steps/dataPoints?filter=steps.interval.start_time%20%3E%3D%20%222026-06-05T00%3A00%3A00Z%22%20AND%20steps.interval.start_time%20%3C%20%222026-06-06T00%3A00%3A00Z%22",200,1,84,NA
+2026-06-08 04:20:57.353,"Salome",2026-05-28,"sleep_minute","https://health.googleapis.com/v4/users/me/dataTypes/sleep/dataPoints",200,1,487,NA
+2026-06-08 04:23:58.876,"Salome",2026-05-29,"sleep_minute","https://health.googleapis.com/v4/users/me/dataTypes/sleep/dataPoints",200,1,375,NA
+2026-06-08 04:31:42.978,"Salome",2026-05-30,"sleep_minute","https://health.googleapis.com/v4/users/me/dataTypes/sleep/dataPoints",200,1,628,NA
+2026-06-08 04:32:07.479,"Salome",2026-05-28,"daily_metrics","multiple endpoints",200,1,1,NA
+2026-06-08 04:32:30.557,"Salome",2026-05-29,"daily_metrics","multiple endpoints",200,1,1,NA
+2026-06-08 04:32:46.369,"Salome",2026-05-30,"daily_metrics","multiple endpoints",200,1,1,NA
+2026-06-08 10:26:47.66,"Salome",2026-06-06,"steps_intraday","https://health.googleapis.com/v4/users/me/dataTypes/steps/dataPoints?filter=steps.interval.start_time%20%3E%3D%20%222026-06-06T00%3A00%3A00Z%22%20AND%20steps.interval.start_time%20%3C%20%222026-06-07T00%3A00%3A00Z%22",200,1,52,NA
+2026-06-08 10:27:42.305,"Salome",2026-06-07,"steps_intraday","https://health.googleapis.com/v4/users/me/dataTypes/steps/dataPoints?filter=steps.interval.start_time%20%3E%3D%20%222026-06-07T00%3A00%3A00Z%22%20AND%20steps.interval.start_time%20%3C%20%222026-06-08T00%3A00%3A00Z%22",200,1,116,NA
+2026-06-08 10:27:59.27,"Salome",2026-06-08,"steps_intraday","https://health.googleapis.com/v4/users/me/dataTypes/steps/dataPoints?filter=steps.interval.start_time%20%3E%3D%20%222026-06-08T00%3A00%3A00Z%22%20AND%20steps.interval.start_time%20%3C%20%222026-06-09T00%3A00%3A00Z%22",200,1,17,NA
+2026-06-08 10:31:31.33,"Salome",2026-05-28,"heart_rate_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate/dataPoints?filter=heart_rate.sample_time.physical_time%20%3E%3D%20%222026-05-28T00%3A00%3A00Z%22%20AND%20heart_rate.sample_time.physical_time%20%3C%20%222026-05-29T00%3A00%3A00Z%22",429,0,0,"{
+  ""error"": {
+    ""code"": 429,
+    ""message"": ""Quota exceeded for quota metric 'Requests' and limit 'Requests per minute per user' of service 'health.googleapis.com' for consumer 'project_number:658499016429'."",
+    ""status"": ""RESOURCE_EXHAUSTED"",
+    ""details"": [
+      {
+        ""@type"": ""type.googleapis.com/google.rpc.ErrorInfo"",
+        ""reason"": ""RATE_LIMIT_EXCEEDED"",
+        ""domain"": ""googleapis.com"",
+        ""metadata"": {
+          ""service"": ""health.googleapis.com"",
+          ""quota_metric"": ""health.googleapis.com/default"",
+          ""quota_unit"": ""1/min/{project}/{user}"",
+          ""quota_limit_value"": ""300"",
+          ""consumer"": ""projects/658499016429"",
+          ""quota_location"": ""global"",
+          ""quota_limit"": ""defaultPerMinutePerUser""
+        }
+      },
+      {
+        ""@type"": ""type.googleapis.com/google.rpc.Help"",
+        ""links"": [
+          {
+            ""description"": ""Request a higher quota limit."",
+            ""url"": ""https://cloud.google.com/docs/quotas/help/request_increase""
+          }
+        ]
+      }
+    ]
+  }
+}
+"
+2026-06-08 10:31:40.014,"Salome",2026-05-28,"heart_rate_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate/dataPoints?filter=heart_rate.sample_time.physical_time%20%3E%3D%20%222026-05-28T00%3A00%3A00Z%22%20AND%20heart_rate.sample_time.physical_time%20%3C%20%222026-05-29T00%3A00%3A00Z%22",429,0,0,"{
+  ""error"": {
+    ""code"": 429,
+    ""message"": ""Quota exceeded for quota metric 'Requests' and limit 'Requests per minute per user' of service 'health.googleapis.com' for consumer 'project_number:658499016429'."",
+    ""status"": ""RESOURCE_EXHAUSTED"",
+    ""details"": [
+      {
+        ""@type"": ""type.googleapis.com/google.rpc.ErrorInfo"",
+        ""reason"": ""RATE_LIMIT_EXCEEDED"",
+        ""domain"": ""googleapis.com"",
+        ""metadata"": {
+          ""service"": ""health.googleapis.com"",
+          ""quota_metric"": ""health.googleapis.com/default"",
+          ""quota_unit"": ""1/min/{project}/{user}"",
+          ""quota_limit_value"": ""300"",
+          ""consumer"": ""projects/658499016429"",
+          ""quota_location"": ""global"",
+          ""quota_limit"": ""defaultPerMinutePerUser""
+        }
+      },
+      {
+        ""@type"": ""type.googleapis.com/google.rpc.Help"",
+        ""links"": [
+          {
+            ""description"": ""Request a higher quota limit."",
+            ""url"": ""https://cloud.google.com/docs/quotas/help/request_increase""
+          }
+        ]
+      }
+    ]
+  }
+}
+"
+2026-06-08 10:33:18.066,"Salome",2026-05-29,"heart_rate_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate/dataPoints?filter=heart_rate.sample_time.physical_time%20%3E%3D%20%222026-05-29T00%3A00%3A00Z%22%20AND%20heart_rate.sample_time.physical_time%20%3C%20%222026-05-30T00%3A00%3A00Z%22",429,0,0,"{
+  ""error"": {
+    ""code"": 429,
+    ""message"": ""Quota exceeded for quota metric 'Requests' and limit 'Requests per minute per user' of service 'health.googleapis.com' for consumer 'project_number:658499016429'."",
+    ""status"": ""RESOURCE_EXHAUSTED"",
+    ""details"": [
+      {
+        ""@type"": ""type.googleapis.com/google.rpc.ErrorInfo"",
+        ""reason"": ""RATE_LIMIT_EXCEEDED"",
+        ""domain"": ""googleapis.com"",
+        ""metadata"": {
+          ""quota_unit"": ""1/min/{project}/{user}"",
+          ""consumer"": ""projects/658499016429"",
+          ""quota_metric"": ""health.googleapis.com/default"",
+          ""quota_location"": ""global"",
+          ""service"": ""health.googleapis.com"",
+          ""quota_limit_value"": ""300"",
+          ""quota_limit"": ""defaultPerMinutePerUser""
+        }
+      },
+      {
+        ""@type"": ""type.googleapis.com/google.rpc.Help"",
+        ""links"": [
+          {
+            ""description"": ""Request a higher quota limit."",
+            ""url"": ""https://cloud.google.com/docs/quotas/help/request_increase""
+          }
+        ]
+      }
+    ]
+  }
+}
+"
+2026-06-08 10:33:20.226,"Salome",2026-05-29,"heart_rate_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate/dataPoints?filter=heart_rate.sample_time.physical_time%20%3E%3D%20%222026-05-29T00%3A00%3A00Z%22%20AND%20heart_rate.sample_time.physical_time%20%3C%20%222026-05-30T00%3A00%3A00Z%22",429,0,0,"{
+  ""error"": {
+    ""code"": 429,
+    ""message"": ""Quota exceeded for quota metric 'Requests' and limit 'Requests per minute per user' of service 'health.googleapis.com' for consumer 'project_number:658499016429'."",
+    ""status"": ""RESOURCE_EXHAUSTED"",
+    ""details"": [
+      {
+        ""@type"": ""type.googleapis.com/google.rpc.ErrorInfo"",
+        ""reason"": ""RATE_LIMIT_EXCEEDED"",
+        ""domain"": ""googleapis.com"",
+        ""metadata"": {
+          ""quota_metric"": ""health.googleapis.com/default"",
+          ""quota_location"": ""global"",
+          ""quota_limit"": ""defaultPerMinutePerUser"",
+          ""service"": ""health.googleapis.com"",
+          ""quota_unit"": ""1/min/{project}/{user}"",
+          ""quota_limit_value"": ""300"",
+          ""consumer"": ""projects/658499016429""
+        }
+      },
+      {
+        ""@type"": ""type.googleapis.com/google.rpc.Help"",
+        ""links"": [
+          {
+            ""description"": ""Request a higher quota limit."",
+            ""url"": ""https://cloud.google.com/docs/quotas/help/request_increase""
+          }
+        ]
+      }
+    ]
+  }
+}
+"
+2026-06-08 10:47:42.378,"Salome",2026-05-30,"heart_rate_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate/dataPoints?filter=heart_rate.sample_time.physical_time%20%3E%3D%20%222026-05-30T00%3A00%3A00Z%22%20AND%20heart_rate.sample_time.physical_time%20%3C%20%222026-05-31T00%3A00%3A00Z%22",200,1,288,NA
+2026-06-08 11:06:24.882,"Salome",2026-05-31,"heart_rate_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate/dataPoints?filter=heart_rate.sample_time.physical_time%20%3E%3D%20%222026-05-31T00%3A00%3A00Z%22%20AND%20heart_rate.sample_time.physical_time%20%3C%20%222026-06-01T00%3A00%3A00Z%22",200,1,288,NA
+2026-06-08 11:14:44.891,"Salome",2026-06-01,"heart_rate_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate/dataPoints?filter=heart_rate.sample_time.physical_time%20%3E%3D%20%222026-06-01T00%3A00%3A00Z%22%20AND%20heart_rate.sample_time.physical_time%20%3C%20%222026-06-02T00%3A00%3A00Z%22",200,1,268,NA
+2026-06-08 12:26:20.831,"Salome",2026-06-04,"heart_rate_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate/dataPoints?filter=heart_rate.sample_time.physical_time%20%3E%3D%20%222026-06-04T00%3A00%3A00Z%22%20AND%20heart_rate.sample_time.physical_time%20%3C%20%222026-06-05T00%3A00%3A00Z%22",200,1,288,NA
+2026-06-08 12:35:06.856,"Salome",2026-06-05,"heart_rate_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate/dataPoints?filter=heart_rate.sample_time.physical_time%20%3E%3D%20%222026-06-05T00%3A00%3A00Z%22%20AND%20heart_rate.sample_time.physical_time%20%3C%20%222026-06-06T00%3A00%3A00Z%22",200,1,253,NA
+2026-06-08 13:26:10.824,"Salome",2026-06-06,"heart_rate_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate/dataPoints?filter=heart_rate.sample_time.physical_time%20%3E%3D%20%222026-06-06T00%3A00%3A00Z%22%20AND%20heart_rate.sample_time.physical_time%20%3C%20%222026-06-07T00%3A00%3A00Z%22",200,1,206,NA
+2026-06-08 13:28:05.547,"Salome",2026-05-30,"zone_minutes_intraday","https://health.googleapis.com/v4/users/me/dataTypes/active-zone-minutes/dataPoints?filter=active_zone_minutes.interval.start_time%20%3E%3D%20%222026-05-30T00%3A00%3A00Z%22%20AND%20active_zone_minutes.interval.start_time%20%3C%20%222026-05-31T00%3A00%3A00Z%22",200,1,2,NA
+2026-06-08 13:35:13.968,"Salome",2026-06-07,"heart_rate_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate/dataPoints?filter=heart_rate.sample_time.physical_time%20%3E%3D%20%222026-06-07T00%3A00%3A00Z%22%20AND%20heart_rate.sample_time.physical_time%20%3C%20%222026-06-08T00%3A00%3A00Z%22",200,1,288,NA
+2026-06-08 16:37:45.062,"Salome",2026-06-08,"heart_rate_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate/dataPoints?filter=heart_rate.sample_time.physical_time%20%3E%3D%20%222026-06-08T00%3A00%3A00Z%22%20AND%20heart_rate.sample_time.physical_time%20%3C%20%222026-06-09T00%3A00%3A00Z%22",200,1,103,NA
+2026-06-08 16:44:51.848,"Salome",2026-05-31,"zone_minutes_intraday","https://health.googleapis.com/v4/users/me/dataTypes/active-zone-minutes/dataPoints?filter=active_zone_minutes.interval.start_time%20%3E%3D%20%222026-05-31T00%3A00%3A00Z%22%20AND%20active_zone_minutes.interval.start_time%20%3C%20%222026-06-01T00%3A00%3A00Z%22",200,1,38,NA
+2026-06-08 16:49:01.138,"Salome",2026-06-01,"zone_minutes_intraday","https://health.googleapis.com/v4/users/me/dataTypes/active-zone-minutes/dataPoints?filter=active_zone_minutes.interval.start_time%20%3E%3D%20%222026-06-01T00%3A00%3A00Z%22%20AND%20active_zone_minutes.interval.start_time%20%3C%20%222026-06-02T00%3A00%3A00Z%22",200,1,10,NA
+2026-06-08 16:50:01.475,"Salome",2026-06-02,"zone_minutes_intraday","https://health.googleapis.com/v4/users/me/dataTypes/active-zone-minutes/dataPoints?filter=active_zone_minutes.interval.start_time%20%3E%3D%20%222026-06-02T00%3A00%3A00Z%22%20AND%20active_zone_minutes.interval.start_time%20%3C%20%222026-06-03T00%3A00%3A00Z%22",200,1,17,NA
+2026-06-08 16:52:33.215,"Salome",2026-06-03,"zone_minutes_intraday","https://health.googleapis.com/v4/users/me/dataTypes/active-zone-minutes/dataPoints?filter=active_zone_minutes.interval.start_time%20%3E%3D%20%222026-06-03T00%3A00%3A00Z%22%20AND%20active_zone_minutes.interval.start_time%20%3C%20%222026-06-04T00%3A00%3A00Z%22",200,1,28,NA
+2026-06-08 16:55:49.667,"Salome",2026-06-04,"zone_minutes_intraday","https://health.googleapis.com/v4/users/me/dataTypes/active-zone-minutes/dataPoints?filter=active_zone_minutes.interval.start_time%20%3E%3D%20%222026-06-04T00%3A00%3A00Z%22%20AND%20active_zone_minutes.interval.start_time%20%3C%20%222026-06-05T00%3A00%3A00Z%22",200,1,1,NA
+2026-06-08 16:57:47.435,"Salome",2026-06-05,"zone_minutes_intraday","https://health.googleapis.com/v4/users/me/dataTypes/active-zone-minutes/dataPoints?filter=active_zone_minutes.interval.start_time%20%3E%3D%20%222026-06-05T00%3A00%3A00Z%22%20AND%20active_zone_minutes.interval.start_time%20%3C%20%222026-06-06T00%3A00%3A00Z%22",200,1,7,NA
+2026-06-08 17:01:23.387,"Salome",2026-06-06,"zone_minutes_intraday","https://health.googleapis.com/v4/users/me/dataTypes/active-zone-minutes/dataPoints?filter=active_zone_minutes.interval.start_time%20%3E%3D%20%222026-06-06T00%3A00%3A00Z%22%20AND%20active_zone_minutes.interval.start_time%20%3C%20%222026-06-07T00%3A00%3A00Z%22",200,1,2,NA
+2026-06-08 17:07:52.993,"Salome",2026-06-07,"zone_minutes_intraday","https://health.googleapis.com/v4/users/me/dataTypes/active-zone-minutes/dataPoints?filter=active_zone_minutes.interval.start_time%20%3E%3D%20%222026-06-07T00%3A00%3A00Z%22%20AND%20active_zone_minutes.interval.start_time%20%3C%20%222026-06-08T00%3A00%3A00Z%22",200,1,3,NA
+2026-06-08 17:12:51.005,"Salome",2026-06-08,"zone_minutes_intraday","https://health.googleapis.com/v4/users/me/dataTypes/active-zone-minutes/dataPoints?filter=active_zone_minutes.interval.start_time%20%3E%3D%20%222026-06-08T00%3A00%3A00Z%22%20AND%20active_zone_minutes.interval.start_time%20%3C%20%222026-06-09T00%3A00%3A00Z%22",200,1,0,"No zone minutes data found"
+2026-06-08 17:15:23.069,"Salome",2026-05-30,"hrv_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate-variability/dataPoints",200,1,125,NA
+2026-06-08 17:19:51.018,"Salome",2026-05-31,"hrv_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate-variability/dataPoints",200,1,75,NA
+2026-06-08 17:23:02.787,"Salome",2026-06-01,"hrv_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate-variability/dataPoints",200,1,50,NA
+2026-06-08 17:27:08.736,"Salome",2026-06-02,"hrv_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate-variability/dataPoints",200,1,86,NA
+2026-06-08 17:29:40.483,"Salome",2026-06-03,"hrv_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate-variability/dataPoints",200,1,55,NA
+2026-06-08 17:33:55.183,"Salome",2026-06-04,"hrv_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate-variability/dataPoints",200,1,105,NA
+2026-06-08 17:36:50.823,"Salome",2026-06-05,"hrv_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate-variability/dataPoints",200,1,51,NA
+2026-06-08 17:59:48.198,"Salome",2026-06-06,"hrv_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate-variability/dataPoints",200,1,95,NA
+2026-06-08 18:10:00.972,"Salome",2026-05-30,"activity_level_intraday","https://health.googleapis.com/v4/users/me/dataTypes/activity-level/dataPoints?filter=activity_level.interval.start_time%20%3E%3D%20%222026-05-30T00%3A00%3A00Z%22%20AND%20activity_level.interval.start_time%20%3C%20%222026-05-31T00%3A00%3A00Z%22",200,1,152,NA
+2026-06-08 18:12:33.953,"Salome",2026-05-31,"activity_level_intraday","https://health.googleapis.com/v4/users/me/dataTypes/activity-level/dataPoints?filter=activity_level.interval.start_time%20%3E%3D%20%222026-05-31T00%3A00%3A00Z%22%20AND%20activity_level.interval.start_time%20%3C%20%222026-06-01T00%3A00%3A00Z%22",200,1,207,NA
+2026-06-08 18:15:44.118,"Salome",2026-06-07,"hrv_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate-variability/dataPoints",200,1,93,NA
+2026-06-08 18:52:47.88,"Salome",2026-06-08,"hrv_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate-variability/dataPoints",200,1,0,"No HRV data found for date"
+2026-06-08 19:13:45.774,"Salome",2026-06-01,"activity_level_intraday","https://health.googleapis.com/v4/users/me/dataTypes/activity-level/dataPoints?filter=activity_level.interval.start_time%20%3E%3D%20%222026-06-01T00%3A00%3A00Z%22%20AND%20activity_level.interval.start_time%20%3C%20%222026-06-02T00%3A00%3A00Z%22",200,1,193,NA
+2026-06-08 19:16:08.799,"Salome",2026-06-02,"activity_level_intraday","https://health.googleapis.com/v4/users/me/dataTypes/activity-level/dataPoints?filter=activity_level.interval.start_time%20%3E%3D%20%222026-06-02T00%3A00%3A00Z%22%20AND%20activity_level.interval.start_time%20%3C%20%222026-06-03T00%3A00%3A00Z%22",200,1,197,NA
+2026-06-08 19:18:15.757,"Salome",2026-06-03,"activity_level_intraday","https://health.googleapis.com/v4/users/me/dataTypes/activity-level/dataPoints?filter=activity_level.interval.start_time%20%3E%3D%20%222026-06-03T00%3A00%3A00Z%22%20AND%20activity_level.interval.start_time%20%3C%20%222026-06-04T00%3A00%3A00Z%22",200,1,240,NA
+2026-06-08 19:26:41.434,"Salome",2026-06-04,"activity_level_intraday","https://health.googleapis.com/v4/users/me/dataTypes/activity-level/dataPoints?filter=activity_level.interval.start_time%20%3E%3D%20%222026-06-04T00%3A00%3A00Z%22%20AND%20activity_level.interval.start_time%20%3C%20%222026-06-05T00%3A00%3A00Z%22",200,1,178,NA
+2026-06-08 19:36:23.422,"Salome",2026-06-05,"activity_level_intraday","https://health.googleapis.com/v4/users/me/dataTypes/activity-level/dataPoints?filter=activity_level.interval.start_time%20%3E%3D%20%222026-06-05T00%3A00%3A00Z%22%20AND%20activity_level.interval.start_time%20%3C%20%222026-06-06T00%3A00%3A00Z%22",200,1,195,NA
+2026-06-08 19:40:02.73,"Salome",2026-06-06,"activity_level_intraday","https://health.googleapis.com/v4/users/me/dataTypes/activity-level/dataPoints?filter=activity_level.interval.start_time%20%3E%3D%20%222026-06-06T00%3A00%3A00Z%22%20AND%20activity_level.interval.start_time%20%3C%20%222026-06-07T00%3A00%3A00Z%22",200,1,113,NA
+2026-06-08 19:53:04.873,"Salome",2026-06-07,"activity_level_intraday","https://health.googleapis.com/v4/users/me/dataTypes/activity-level/dataPoints?filter=activity_level.interval.start_time%20%3E%3D%20%222026-06-07T00%3A00%3A00Z%22%20AND%20activity_level.interval.start_time%20%3C%20%222026-06-08T00%3A00%3A00Z%22",200,1,195,NA
+2026-06-08 20:04:52.063,"Salome",2026-06-08,"activity_level_intraday","https://health.googleapis.com/v4/users/me/dataTypes/activity-level/dataPoints?filter=activity_level.interval.start_time%20%3E%3D%20%222026-06-08T00%3A00%3A00Z%22%20AND%20activity_level.interval.start_time%20%3C%20%222026-06-09T00%3A00%3A00Z%22",200,1,92,NA
+2026-06-08 20:07:56.4,"Salome",2026-05-30,"distance_intraday","https://health.googleapis.com/v4/users/me/dataTypes/distance/dataPoints?filter=distance.interval.start_time%20%3E%3D%20%222026-05-30T00%3A00%3A00Z%22%20AND%20distance.interval.start_time%20%3C%20%222026-05-31T00%3A00%3A00Z%22",200,1,43,NA
+2026-06-08 21:06:54.373,"Salome",2026-05-31,"distance_intraday","https://health.googleapis.com/v4/users/me/dataTypes/distance/dataPoints?filter=distance.interval.start_time%20%3E%3D%20%222026-05-31T00%3A00%3A00Z%22%20AND%20distance.interval.start_time%20%3C%20%222026-06-01T00%3A00%3A00Z%22",200,1,109,NA
+2026-06-08 21:11:45.343,"Salome",2026-06-01,"distance_intraday","https://health.googleapis.com/v4/users/me/dataTypes/distance/dataPoints?filter=distance.interval.start_time%20%3E%3D%20%222026-06-01T00%3A00%3A00Z%22%20AND%20distance.interval.start_time%20%3C%20%222026-06-02T00%3A00%3A00Z%22",200,1,108,NA
+2026-06-08 21:12:15.371,"Salome",2026-05-30,"sedentary_periods","https://health.googleapis.com/v4/users/me/dataTypes/sedentary-period/dataPoints",200,1,14,NA
+2026-06-08 21:16:44.455,"Salome",2026-06-02,"distance_intraday","https://health.googleapis.com/v4/users/me/dataTypes/distance/dataPoints?filter=distance.interval.start_time%20%3E%3D%20%222026-06-02T00%3A00%3A00Z%22%20AND%20distance.interval.start_time%20%3C%20%222026-06-03T00%3A00%3A00Z%22",200,1,90,NA
+2026-06-08 21:22:50.075,"Salome",2026-06-03,"distance_intraday","https://health.googleapis.com/v4/users/me/dataTypes/distance/dataPoints?filter=distance.interval.start_time%20%3E%3D%20%222026-06-03T00%3A00%3A00Z%22%20AND%20distance.interval.start_time%20%3C%20%222026-06-04T00%3A00%3A00Z%22",200,1,138,NA
+2026-06-08 21:24:14.386,"Salome",2026-05-31,"sedentary_periods","https://health.googleapis.com/v4/users/me/dataTypes/sedentary-period/dataPoints",200,1,10,NA
+2026-06-08 21:30:25.361,"Salome",2026-06-04,"distance_intraday","https://health.googleapis.com/v4/users/me/dataTypes/distance/dataPoints?filter=distance.interval.start_time%20%3E%3D%20%222026-06-04T00%3A00%3A00Z%22%20AND%20distance.interval.start_time%20%3C%20%222026-06-05T00%3A00%3A00Z%22",200,1,30,NA
+2026-06-08 21:34:30.344,"Salome",2026-05-31,"sleep_minute","https://health.googleapis.com/v4/users/me/dataTypes/sleep/dataPoints",200,1,384,NA
+2026-06-08 21:45:51.579,"Salome",2026-06-05,"distance_intraday","https://health.googleapis.com/v4/users/me/dataTypes/distance/dataPoints?filter=distance.interval.start_time%20%3E%3D%20%222026-06-05T00%3A00%3A00Z%22%20AND%20distance.interval.start_time%20%3C%20%222026-06-06T00%3A00%3A00Z%22",200,1,84,NA
+2026-06-08 21:49:08.387,"Salome",2026-06-06,"distance_intraday","https://health.googleapis.com/v4/users/me/dataTypes/distance/dataPoints?filter=distance.interval.start_time%20%3E%3D%20%222026-06-06T00%3A00%3A00Z%22%20AND%20distance.interval.start_time%20%3C%20%222026-06-07T00%3A00%3A00Z%22",200,1,52,NA
+2026-06-08 21:52:30.895,"Salome",2026-05-30,"spo2_intraday","https://health.googleapis.com/v4/users/me/dataTypes/oxygen-saturation/dataPoints?filter=oxygen_saturation.sample_time.physical_time%20%3E%3D%20%222026-05-30T00%3A00%3A00Z%22%20AND%20oxygen_saturation.sample_time.physical_time%20%3C%20%222026-05-31T00%3A00%3A00Z%22&pageToken=Xm5ht92AoyZxGFRuWjB5Y2vytJzwbXd_KPSbzaB0",200,1,664,NA
+2026-06-08 21:54:50.998,"Salome",2026-06-07,"distance_intraday","https://health.googleapis.com/v4/users/me/dataTypes/distance/dataPoints?filter=distance.interval.start_time%20%3E%3D%20%222026-06-07T00%3A00%3A00Z%22%20AND%20distance.interval.start_time%20%3C%20%222026-06-08T00%3A00%3A00Z%22",200,1,116,NA
+2026-06-08 22:01:43.013,"Salome",2026-06-08,"distance_intraday","https://health.googleapis.com/v4/users/me/dataTypes/distance/dataPoints?filter=distance.interval.start_time%20%3E%3D%20%222026-06-08T00%3A00%3A00Z%22%20AND%20distance.interval.start_time%20%3C%20%222026-06-09T00%3A00%3A00Z%22",200,1,17,NA
+2026-06-08 22:12:18.84,"Salome",2026-06-01,"sedentary_periods","https://health.googleapis.com/v4/users/me/dataTypes/sedentary-period/dataPoints",200,1,19,NA
+2026-06-08 22:14:45.227,"Salome",2026-06-02,"sedentary_periods","https://health.googleapis.com/v4/users/me/dataTypes/sedentary-period/dataPoints",200,1,12,NA
+2026-06-08 22:24:36.289,"Salome",2026-06-03,"sedentary_periods","https://health.googleapis.com/v4/users/me/dataTypes/sedentary-period/dataPoints",200,1,23,NA
+2026-06-08 22:38:01.17,"Salome",2026-06-04,"sedentary_periods","https://health.googleapis.com/v4/users/me/dataTypes/sedentary-period/dataPoints",200,1,13,NA
+2026-06-08 22:38:58.18,"Salome",2026-06-05,"sedentary_periods","https://health.googleapis.com/v4/users/me/dataTypes/sedentary-period/dataPoints",200,1,13,NA
+2026-06-08 22:40:04.705,"Salome",2026-06-06,"sedentary_periods","https://health.googleapis.com/v4/users/me/dataTypes/sedentary-period/dataPoints",200,1,20,NA
+2026-06-08 22:42:17.174,"Salome",2026-06-07,"sedentary_periods","https://health.googleapis.com/v4/users/me/dataTypes/sedentary-period/dataPoints",200,1,15,NA
+2026-06-08 23:27:34.852,"Salome",2026-05-31,"daily_metrics","multiple endpoints",200,1,1,NA
+2026-06-08 23:27:59.112,"Salome",2026-06-01,"daily_metrics","multiple endpoints",200,1,1,NA
+2026-06-08 23:28:20.194,"Salome",2026-06-08,"sedentary_periods","https://health.googleapis.com/v4/users/me/dataTypes/sedentary-period/dataPoints",200,1,3,NA
+2026-06-08 23:30:28.049,"Salome",2026-06-02,"daily_metrics","multiple endpoints",200,1,1,NA
+2026-06-08 23:31:56.344,"Salome",2026-05-31,"spo2_intraday","https://health.googleapis.com/v4/users/me/dataTypes/oxygen-saturation/dataPoints?filter=oxygen_saturation.sample_time.physical_time%20%3E%3D%20%222026-05-31T00%3A00%3A00Z%22%20AND%20oxygen_saturation.sample_time.physical_time%20%3C%20%222026-06-01T00%3A00%3A00Z%22&pageToken=Xm5hxtiGoyZxGFRuWjB5Y2vykZnwbXd_KPT406B0",200,1,393,NA
+2026-06-08 23:32:17.506,"Salome",2026-05-30,"activity_sessions","https://health.googleapis.com/v4/users/me/dataTypes/exercise/dataPoints",200,1,0,"No exercise sessions found for date"
+2026-06-08 23:34:29.425,"Salome",2026-05-28,"activity_sessions","https://health.googleapis.com/v4/users/me/dataTypes/exercise/dataPoints",200,1,2,NA
+2026-06-08 23:34:40.908,"Salome",2026-05-29,"activity_sessions","https://health.googleapis.com/v4/users/me/dataTypes/exercise/dataPoints",200,1,2,NA
+2026-06-08 23:35:26.55,"Salome",2026-05-28,"heart_rate_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate/dataPoints?filter=heart_rate.sample_time.physical_time%20%3E%3D%20%222026-05-28T00%3A00%3A00Z%22%20AND%20heart_rate.sample_time.physical_time%20%3C%20%222026-05-29T00%3A00%3A00Z%22",200,1,142,NA
+2026-06-08 23:38:13.48,"Salome",2026-05-29,"heart_rate_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate/dataPoints?filter=heart_rate.sample_time.physical_time%20%3E%3D%20%222026-05-29T00%3A00%3A00Z%22%20AND%20heart_rate.sample_time.physical_time%20%3C%20%222026-05-30T00%3A00%3A00Z%22",429,0,0,"{
+  ""error"": {
+    ""code"": 429,
+    ""message"": ""Quota exceeded for quota metric 'Requests' and limit 'Requests per minute per user' of service 'health.googleapis.com' for consumer 'project_number:658499016429'."",
+    ""status"": ""RESOURCE_EXHAUSTED"",
+    ""details"": [
+      {
+        ""@type"": ""type.googleapis.com/google.rpc.ErrorInfo"",
+        ""reason"": ""RATE_LIMIT_EXCEEDED"",
+        ""domain"": ""googleapis.com"",
+        ""metadata"": {
+          ""consumer"": ""projects/658499016429"",
+          ""quota_metric"": ""health.googleapis.com/default"",
+          ""service"": ""health.googleapis.com"",
+          ""quota_limit"": ""defaultPerMinutePerUser"",
+          ""quota_location"": ""global"",
+          ""quota_unit"": ""1/min/{project}/{user}"",
+          ""quota_limit_value"": ""300""
+        }
+      },
+      {
+        ""@type"": ""type.googleapis.com/google.rpc.Help"",
+        ""links"": [
+          {
+            ""description"": ""Request a higher quota limit."",
+            ""url"": ""https://cloud.google.com/docs/quotas/help/request_increase""
+          }
+        ]
+      }
+    ]
+  }
+}
+"
+2026-06-08 23:38:14.222,"Salome",2026-05-29,"heart_rate_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate/dataPoints?filter=heart_rate.sample_time.physical_time%20%3E%3D%20%222026-05-29T00%3A00%3A00Z%22%20AND%20heart_rate.sample_time.physical_time%20%3C%20%222026-05-30T00%3A00%3A00Z%22",429,0,0,"{
+  ""error"": {
+    ""code"": 429,
+    ""message"": ""Quota exceeded for quota metric 'Requests' and limit 'Requests per minute per user' of service 'health.googleapis.com' for consumer 'project_number:658499016429'."",
+    ""status"": ""RESOURCE_EXHAUSTED"",
+    ""details"": [
+      {
+        ""@type"": ""type.googleapis.com/google.rpc.ErrorInfo"",
+        ""reason"": ""RATE_LIMIT_EXCEEDED"",
+        ""domain"": ""googleapis.com"",
+        ""metadata"": {
+          ""quota_unit"": ""1/min/{project}/{user}"",
+          ""quota_location"": ""global"",
+          ""quota_limit"": ""defaultPerMinutePerUser"",
+          ""service"": ""health.googleapis.com"",
+          ""quota_metric"": ""health.googleapis.com/default"",
+          ""quota_limit_value"": ""300"",
+          ""consumer"": ""projects/658499016429""
+        }
+      },
+      {
+        ""@type"": ""type.googleapis.com/google.rpc.Help"",
+        ""links"": [
+          {
+            ""description"": ""Request a higher quota limit."",
+            ""url"": ""https://cloud.google.com/docs/quotas/help/request_increase""
+          }
+        ]
+      }
+    ]
+  }
+}
+"
+2026-06-08 23:38:58.847,"Salome",2026-05-29,"heart_rate_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate/dataPoints?filter=heart_rate.sample_time.physical_time%20%3E%3D%20%222026-05-29T00%3A00%3A00Z%22%20AND%20heart_rate.sample_time.physical_time%20%3C%20%222026-05-30T00%3A00%3A00Z%22",429,0,0,"{
+  ""error"": {
+    ""code"": 429,
+    ""message"": ""Quota exceeded for quota metric 'Requests' and limit 'Requests per minute per user' of service 'health.googleapis.com' for consumer 'project_number:658499016429'."",
+    ""status"": ""RESOURCE_EXHAUSTED"",
+    ""details"": [
+      {
+        ""@type"": ""type.googleapis.com/google.rpc.ErrorInfo"",
+        ""reason"": ""RATE_LIMIT_EXCEEDED"",
+        ""domain"": ""googleapis.com"",
+        ""metadata"": {
+          ""quota_location"": ""global"",
+          ""service"": ""health.googleapis.com"",
+          ""quota_limit_value"": ""300"",
+          ""quota_limit"": ""defaultPerMinutePerUser"",
+          ""consumer"": ""projects/658499016429"",
+          ""quota_unit"": ""1/min/{project}/{user}"",
+          ""quota_metric"": ""health.googleapis.com/default""
+        }
+      },
+      {
+        ""@type"": ""type.googleapis.com/google.rpc.Help"",
+        ""links"": [
+          {
+            ""description"": ""Request a higher quota limit."",
+            ""url"": ""https://cloud.google.com/docs/quotas/help/request_increase""
+          }
+        ]
+      }
+    ]
+  }
+}
+"
+2026-06-08 23:40:16.667,"Salome",2026-05-29,"zone_minutes_intraday","https://health.googleapis.com/v4/users/me/dataTypes/active-zone-minutes/dataPoints?filter=active_zone_minutes.interval.start_time%20%3E%3D%20%222026-05-29T00%3A00%3A00Z%22%20AND%20active_zone_minutes.interval.start_time%20%3C%20%222026-05-30T00%3A00%3A00Z%22",200,1,3,NA
+2026-06-08 23:40:52.064,"Salome",2026-05-29,"hrv_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate-variability/dataPoints",200,1,75,NA
+2026-06-08 23:42:55.753,"Salome",2026-05-29,"activity_level_intraday","https://health.googleapis.com/v4/users/me/dataTypes/activity-level/dataPoints?filter=activity_level.interval.start_time%20%3E%3D%20%222026-05-29T00%3A00%3A00Z%22%20AND%20activity_level.interval.start_time%20%3C%20%222026-05-30T00%3A00%3A00Z%22",200,1,202,NA
+2026-06-08 23:43:28.039,"Salome",2026-05-29,"distance_intraday","https://health.googleapis.com/v4/users/me/dataTypes/distance/dataPoints?filter=distance.interval.start_time%20%3E%3D%20%222026-05-29T00%3A00%3A00Z%22%20AND%20distance.interval.start_time%20%3C%20%222026-05-30T00%3A00%3A00Z%22",200,1,94,NA
+2026-06-08 23:43:44.519,"Salome",2026-05-29,"sedentary_periods","https://health.googleapis.com/v4/users/me/dataTypes/sedentary-period/dataPoints",200,1,18,NA
+2026-06-08 23:49:15.159,"Salome",2026-06-01,"sleep_minute","https://health.googleapis.com/v4/users/me/dataTypes/sleep/dataPoints",200,1,370,NA
+2026-06-09 00:13:52.67,"Salome",2026-05-29,"spo2_intraday","https://health.googleapis.com/v4/users/me/dataTypes/oxygen-saturation/dataPoints?filter=oxygen_saturation.sample_time.physical_time%20%3E%3D%20%222026-05-29T00%3A00%3A00Z%22%20AND%20oxygen_saturation.sample_time.physical_time%20%3C%20%222026-05-30T00%3A00%3A00Z%22&pageToken=Xm5h3MSNoyZxGFRuWjB5Y2vyy5fwbXd_KPS-yKB0",200,1,382,NA
+2026-06-09 00:14:53.255,"Salome",2026-05-28,"breathing_rate_summary","https://health.googleapis.com/v4/users/me/dataTypes/respiratory-rate-sleep-summary/dataPoints",200,1,0,"No breathing data found"
+2026-06-09 00:16:11.681,"Salome",2026-05-28,"spo2_intraday","https://health.googleapis.com/v4/users/me/dataTypes/oxygen-saturation/dataPoints?filter=oxygen_saturation.sample_time.physical_time%20%3E%3D%20%222026-05-28T00%3A00%3A00Z%22%20AND%20oxygen_saturation.sample_time.physical_time%20%3C%20%222026-05-29T00%3A00%3A00Z%22&pageToken=Xm5h1b-LoyZxGFRuWjB5Y2vy7qrwbXd_KPTBw6B0",200,1,139,NA
+2026-06-09 00:19:44.995,"Salome",2026-05-28,"sedentary_periods","https://health.googleapis.com/v4/users/me/dataTypes/sedentary-period/dataPoints",200,1,16,NA
+2026-06-09 00:22:15.4,"Salome",2026-05-28,"zone_minutes_intraday","https://health.googleapis.com/v4/users/me/dataTypes/active-zone-minutes/dataPoints?filter=active_zone_minutes.interval.start_time%20%3E%3D%20%222026-05-28T00%3A00%3A00Z%22%20AND%20active_zone_minutes.interval.start_time%20%3C%20%222026-05-29T00%3A00%3A00Z%22",200,1,13,NA
+2026-06-09 00:22:49.786,"Salome",2026-05-28,"hrv_intraday","https://health.googleapis.com/v4/users/me/dataTypes/heart-rate-variability/dataPoints",200,1,0,"No HRV data found for date"
+2026-06-09 00:31:21.739,"Salome",2026-05-28,"activity_level_intraday","https://health.googleapis.com/v4/users/me/dataTypes/activity-level/dataPoints?filter=activity_level.interval.start_time%20%3E%3D%20%222026-05-28T00%3A00%3A00Z%22%20AND%20activity_level.interval.start_time%20%3C%20%222026-05-29T00%3A00%3A00Z%22",200,1,167,NA
+2026-06-09 00:32:41.441,"Salome",2026-05-28,"distance_intraday","https://health.googleapis.com/v4/users/me/dataTypes/distance/dataPoints?filter=distance.interval.start_time%20%3E%3D%20%222026-05-28T00%3A00%3A00Z%22%20AND%20distance.interval.start_time%20%3C%20%222026-05-29T00%3A00%3A00Z%22",200,1,100,NA
+2026-06-09 00:34:48.32,"Salome",2026-05-29,"breathing_rate_summary","https://health.googleapis.com/v4/users/me/dataTypes/respiratory-rate-sleep-summary/dataPoints",200,1,1,NA
+2026-06-09 00:36:55.391,"Salome",2026-05-30,"breathing_rate_summary","https://health.googleapis.com/v4/users/me/dataTypes/respiratory-rate-sleep-summary/dataPoints",200,1,2,NA
+2026-06-09 00:37:44.845,"Salome",2026-06-09,"activity_level_intraday","https://health.googleapis.com/v4/users/me/dataTypes/activity-level/dataPoints?filter=activity_level.interval.start_time%20%3E%3D%20%222026-06-09T00%3A00%3A00Z%22%20AND%20activity_level.interval.start_time%20%3C%20%222026-06-10T00%3A00%3A00Z%22",200,1,0,"No activity level data found"
+2026-06-09 00:37:57.467,"Salome",2026-05-30,"activity_sessions","https://health.googleapis.com/v4/users/me/dataTypes/exercise/dataPoints",200,1,0,"No exercise sessions found for date"
+2026-06-09 00:38:31.081,"Salome",2026-05-31,"breathing_rate_summary","https://health.googleapis.com/v4/users/me/dataTypes/respiratory-rate-sleep-summary/dataPoints",200,1,1,NA
+2026-06-09 00:40:43.136,"Salome",2026-06-01,"spo2_intraday","https://health.googleapis.com/v4/users/me/dataTypes/oxygen-saturation/dataPoints?filter=oxygen_saturation.sample_time.physical_time%20%3E%3D%20%222026-06-01T00%3A00%3A00Z%22%20AND%20oxygen_saturation.sample_time.physical_time%20%3C%20%222026-06-02T00%3A00%3A00Z%22&pageToken=Xm5hqoadoyZxGFRuWjB5Y2vy8ofwbXd_KPTV2KB0",200,1,462,NA
+2026-06-09 00:41:37.168,"Salome",2026-05-30,"activity_sessions","https://health.googleapis.com/v4/users/me/dataTypes/exercise/dataPoints",200,1,0,"No exercise sessions found for date"
+2026-06-09 00:42:23.192,"Salome",2026-05-31,"activity_sessions","https://health.googleapis.com/v4/users/me/dataTypes/exercise/dataPoints",200,1,4,NA
+2026-06-09 00:42:57.969,"Salome",2026-06-01,"activity_sessions","https://health.googleapis.com/v4/users/me/dataTypes/exercise/dataPoints",200,1,1,NA
+2026-06-09 00:43:20.924,"Salome",2026-06-01,"breathing_rate_summary","https://health.googleapis.com/v4/users/me/dataTypes/respiratory-rate-sleep-summary/dataPoints",200,1,1,NA
+2026-06-09 00:43:26.407,"Salome",2026-06-08,"zone_minutes_intraday","https://health.googleapis.com/v4/users/me/dataTypes/active-zone-minutes/dataPoints?filter=active_zone_minutes.interval.start_time%20%3E%3D%20%222026-06-08T00%3A00%3A00Z%22%20AND%20active_zone_minutes.interval.start_time%20%3C%20%222026-06-09T00%3A00%3A00Z%22",200,1,0,"No zone minutes data found"
+2026-06-09 00:44:06.17,"Salome",2026-06-02,"activity_sessions","https://health.googleapis.com/v4/users/me/dataTypes/exercise/dataPoints",200,1,1,NA
+2026-06-09 00:44:39.995,"Salome",2026-06-08,"zone_minutes_intraday","https://health.googleapis.com/v4/users/me/dataTypes/active-zone-minutes/dataPoints?filter=active_zone_minutes.interval.start_time%20%3E%3D%20%222026-06-08T00%3A00%3A00Z%22%20AND%20active_zone_minutes.interval.start_time%20%3C%20%222026-06-09T00%3A00%3A00Z%22",200,1,0,"No zone minutes data found"
+2026-06-09 00:45:29.337,"Salome",2026-06-03,"activity_sessions","https://health.googleapis.com/v4/users/me/dataTypes/exercise/dataPoints",200,1,4,NA
+2026-06-09 00:46:04.522,"Salome",2026-06-04,"activity_sessions","https://health.googleapis.com/v4/users/me/dataTypes/exercise/dataPoints",200,1,0,"No exercise sessions found for date"
+2026-06-09 00:48:00.366,"Salome",2026-06-02,"sleep_minute","https://health.googleapis.com/v4/users/me/dataTypes/sleep/dataPoints",200,1,437,NA
+2026-06-09 00:51:27.642,"Salome",2026-06-02,"spo2_intraday","https://health.googleapis.com/v4/users/me/dataTypes/oxygen-saturation/dataPoints?filter=oxygen_saturation.sample_time.physical_time%20%3E%3D%20%222026-06-02T00%3A00%3A00Z%22%20AND%20oxygen_saturation.sample_time.physical_time%20%3C%20%222026-06-03T00%3A00%3A00Z%22&pageToken=Xm5hiuWQoyZxGFRuWjB5Y2vy34zwbXd_KPSy3aB0",200,1,469,NA
+2026-06-09 00:52:07.839,"Salome",2026-06-02,"breathing_rate_summary","https://health.googleapis.com/v4/users/me/dataTypes/respiratory-rate-sleep-summary/dataPoints",200,1,1,NA
+2026-06-09 00:53:12.966,"Salome",2026-06-03,"daily_metrics","multiple endpoints",200,1,1,NA
+2026-06-09 00:53:31.523,"Salome",2026-06-03,"breathing_rate_summary","https://health.googleapis.com/v4/users/me/dataTypes/respiratory-rate-sleep-summary/dataPoints",200,1,1,NA
+2026-06-09 00:55:24.004,"Salome",2026-06-03,"spo2_intraday","https://health.googleapis.com/v4/users/me/dataTypes/oxygen-saturation/dataPoints?filter=oxygen_saturation.sample_time.physical_time%20%3E%3D%20%222026-06-03T00%3A00%3A00Z%22%20AND%20oxygen_saturation.sample_time.physical_time%20%3C%20%222026-06-04T00%3A00%3A00Z%22&pageToken=Xm5hktqXoyZxGFRuWjB5Y2vyuInwbXd_KPTvo6F0",200,1,276,NA
+2026-06-09 00:57:35.953,"Salome",2026-06-03,"sleep_minute","https://health.googleapis.com/v4/users/me/dataTypes/sleep/dataPoints",200,1,275,NA
+2026-06-09 00:58:40.281,"Salome",2026-06-04,"daily_metrics","multiple endpoints",200,1,1,NA
+2026-06-09 00:59:06.501,"Salome",2026-06-04,"breathing_rate_summary","https://health.googleapis.com/v4/users/me/dataTypes/respiratory-rate-sleep-summary/dataPoints",200,1,1,NA
+2026-06-09 01:03:16.245,"Salome",2026-06-04,"sleep_minute","https://health.googleapis.com/v4/users/me/dataTypes/sleep/dataPoints",200,1,531,NA
+2026-06-09 01:04:02.884,"Salome",2026-06-04,"activity_sessions","https://health.googleapis.com/v4/users/me/dataTypes/exercise/dataPoints",200,1,0,"No exercise sessions found for date"
+2026-06-09 01:04:37.506,"Salome",2026-06-04,"activity_sessions","https://health.googleapis.com/v4/users/me/dataTypes/exercise/dataPoints",200,1,0,"No exercise sessions found for date"
+2026-06-09 01:06:48.33,"Salome",2026-06-04,"spo2_intraday","https://health.googleapis.com/v4/users/me/dataTypes/oxygen-saturation/dataPoints?filter=oxygen_saturation.sample_time.physical_time%20%3E%3D%20%222026-06-04T00%3A00%3A00Z%22%20AND%20oxygen_saturation.sample_time.physical_time%20%3C%20%222026-06-05T00%3A00%3A00Z%22&pageToken=Xm5hvvTtoiZxGFRuWjB5Y2vy5ffxbXd_KPTMqKF0",200,1,539,NA
+2026-06-09 01:11:22.736,"Salome",2026-06-05,"daily_metrics","multiple endpoints",200,1,1,NA
+2026-06-09 01:11:33.415,"Salome",2026-06-05,"breathing_rate_summary","https://health.googleapis.com/v4/users/me/dataTypes/respiratory-rate-sleep-summary/dataPoints",200,1,1,NA
+2026-06-09 01:13:00.395,"Salome",2026-06-05,"sleep_minute","https://health.googleapis.com/v4/users/me/dataTypes/sleep/dataPoints",200,1,259,NA
+2026-06-09 01:15:35.367,"Salome",2026-06-05,"spo2_intraday","https://health.googleapis.com/v4/users/me/dataTypes/oxygen-saturation/dataPoints?filter=oxygen_saturation.sample_time.physical_time%20%3E%3D%20%222026-06-05T00%3A00%3A00Z%22%20AND%20oxygen_saturation.sample_time.physical_time%20%3C%20%222026-06-06T00%3A00%3A00Z%22&pageToken=Xm5h6PTgoiZxGFRuWjB5Y2vyxvzxbXd_KPSpraF0",200,1,255,NA
+2026-06-09 01:16:18.793,"Salome",2026-06-06,"activity_sessions","https://health.googleapis.com/v4/users/me/dataTypes/exercise/dataPoints",200,1,1,NA
+2026-06-09 01:18:58.249,"Salome",2026-06-06,"sleep_minute","https://health.googleapis.com/v4/users/me/dataTypes/sleep/dataPoints",200,1,475,NA
+2026-06-09 01:33:37.458,"Salome",2026-06-06,"spo2_intraday","https://health.googleapis.com/v4/users/me/dataTypes/oxygen-saturation/dataPoints?filter=oxygen_saturation.sample_time.physical_time%20%3E%3D%20%222026-06-06T00%3A00%3A00Z%22%20AND%20oxygen_saturation.sample_time.physical_time%20%3C%20%222026-06-07T00%3A00%3A00Z%22&pageToken=Xm5htYrmoiZxGFRuWjB5Y2vyo_nxbXd_KPSGsqF0",200,1,484,NA
+2026-06-09 01:34:07.475,"Salome",2026-06-06,"daily_metrics","multiple endpoints",200,1,1,NA
+2026-06-09 01:34:48.292,"Salome",2026-06-07,"activity_sessions","https://health.googleapis.com/v4/users/me/dataTypes/exercise/dataPoints",200,1,0,"No exercise sessions found for date"
+2026-06-09 01:37:16.8,"Salome",2026-06-07,"sleep_minute","https://health.googleapis.com/v4/users/me/dataTypes/sleep/dataPoints",200,1,469,NA
+2026-06-09 01:37:37.275,"Salome",2026-06-07,"breathing_rate_summary","https://health.googleapis.com/v4/users/me/dataTypes/respiratory-rate-sleep-summary/dataPoints",200,1,1,NA
+2026-06-09 01:37:59.813,"Salome",2026-06-07,"daily_metrics","multiple endpoints",200,1,1,NA
+2026-06-09 01:39:58.53,"Salome",2026-06-07,"spo2_intraday","https://health.googleapis.com/v4/users/me/dataTypes/oxygen-saturation/dataPoints?filter=oxygen_saturation.sample_time.physical_time%20%3E%3D%20%222026-06-07T00%3A00%3A00Z%22%20AND%20oxygen_saturation.sample_time.physical_time%20%3C%20%222026-06-08T00%3A00%3A00Z%22&pageToken=Xm5hwOT9oiZxGFRuWjB5Y2vyjObxbXd_KPTjuKF0",200,1,479,NA
+2026-06-09 01:41:01.157,"Salome",2026-06-06,"breathing_rate_summary","https://health.googleapis.com/v4/users/me/dataTypes/respiratory-rate-sleep-summary/dataPoints",200,1,1,NA
+2026-06-09 01:42:28.355,"Salome",2026-06-08,"activity_sessions","https://health.googleapis.com/v4/users/me/dataTypes/exercise/dataPoints",200,1,0,"No exercise sessions found for date"
+2026-06-09 01:42:59.159,"Salome",2026-06-08,"sleep_minute","https://health.googleapis.com/v4/users/me/dataTypes/sleep/dataPoints",200,1,0,NA
+2026-06-09 01:43:19.963,"Salome",2026-06-08,"spo2_intraday","https://health.googleapis.com/v4/users/me/dataTypes/oxygen-saturation/dataPoints?filter=oxygen_saturation.sample_time.physical_time%20%3E%3D%20%222026-06-08T00%3A00%3A00Z%22%20AND%20oxygen_saturation.sample_time.physical_time%20%3C%20%222026-06-09T00%3A00%3A00Z%22",200,1,0,"No SpO2 data found"
+2026-06-09 01:43:34.215,"Salome",2026-06-08,"breathing_rate_summary","https://health.googleapis.com/v4/users/me/dataTypes/respiratory-rate-sleep-summary/dataPoints",200,1,0,"No breathing data found"
+2026-06-09 01:43:53.537,"Salome",2026-06-08,"daily_metrics","multiple endpoints",200,1,1,NA

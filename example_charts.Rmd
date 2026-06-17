@@ -20,6 +20,60 @@ library(knitr)
 library(see)
 ```
 
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# Source colour palette
+# source("R/colours.R")
+
+# R/colours.R
+# Okabe-Ito color palette - Colorblind accessible
+# Source: Okabe, M., & Ito, K. (2008)
+
+# Data colors - mapped to metrics
+clr <- list(
+  hr       = "#D55E00",  # vermillion
+  steps    = "#0072B2",  # blue
+  deep     = "#009E73",  # green
+  light    = "#56B4E9",  # lightblue
+  rem      = "#CC79A7",  # purple
+  wake     = "#E69F00",  # orange
+  calories = "#F5C710",  # yellow
+  spo2     = "#009E73",  # green
+  bg       = "#FFFFFF",  # white
+  
+  fat_burn = "#56B4E9",  # lightblue
+  cardio   = "#F5C710",  # yellow
+  peak     = "#D55E00",  # vermillion
+  
+  avg      = "#D55E00",  # vermillion
+  min      = "#009E73",  # green
+  sum      = "#56B4E9",  # lightblue
+  max      = "#E69F00",  # orange
+  
+  text_primary   = "#000000",  # black
+  text_secondary = "#999999",  # grey
+  
+  target_line = "#999999",  # grey
+  grid_line   = "#E5E7EB",  # lightgrey
+  error_bar   = "#999999",  # grey
+  
+  # Okabe-Ito color definitions
+  black      = "#000000",
+  orange     = "#E69F00",
+  lightblue  = "#56B4E9",
+  green      = "#009E73",
+  yellow     = "#F5C710",
+  blue       = "#0072B2",
+  vermillion = "#D55E00",
+  purple     = "#CC79A7",
+  grey       = "#999999",
+  white      = "#FFFFFF",
+  lightgrey  = "#E5E7EB"
+)
+```
+
+
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # Load all CSV files from csvdata ------------------------------------
 
@@ -37,6 +91,7 @@ for (i in seq_along(csv_files)) {
   #cat("Loaded:", var_name, "-", nrow(get(var_name)), "rows\n")
 }
 ```
+
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # Helper functions -----------------------------------------
@@ -131,10 +186,6 @@ create_empty_plot <- function(message = "No data available") {
 }
 ```
 
-```{r, echo=FALSE, warning=FALSE, message=FALSE}
-# Source colour palette
-source("R/colours.R")
-```
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # Theme ------------------------
@@ -168,8 +219,6 @@ dash_theme <- function() {
 ```
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
-# PREPARE DATA - Following app.R patterns -------------------------------------------
-
 # Prepare HR data (date+time columns)
 hr_data <- hr_intraday_5m %>%
   add_datetime_column() %>%
@@ -300,7 +349,7 @@ overview_kpi_table <- data.frame(
   )
 )
 
-kable(kpi_table)
+kable(overview_kpi_table)  # FIXED: Changed from kpi_table to overview_kpi_table
 ```
 
 ### 5. Heart Rate Over Time
@@ -1544,125 +1593,9 @@ if (exists("sleep_data") && !is.null(sleep_data) && nrow(sleep_data) > 0) {
 } else {
   create_empty_plot("No sleep data available")
 }
-
-# ===== SLEEP STAGE STACKED BARS PER NIGHT =====
-if (exists("sleep_data") && !is.null(sleep_data) && nrow(sleep_data) > 0) {
-  stacked_data <- sleep_data %>%
-    filter(sleep_stage %in% c("deep", "rem", "light", "wake")) %>%
-    group_by(dateOfSleep, sleep_stage) %>%
-    summarise(minutes = n(), .groups = "drop") %>%
-    mutate(
-      sleep_stage = recode(sleep_stage,
-                          deep = "Deep",
-                          rem = "REM",
-                          light = "Light",
-                          wake = "Wake"),
-      dateOfSleep = as.Date(dateOfSleep)
-    )
-  
-  # Use ggplotly with explicit style() to preserve colors
-  p <- ggplot(stacked_data, aes(x = dateOfSleep, y = minutes, fill = sleep_stage)) +
-    geom_col(width = 0.7, alpha = 0.9) +
-    scale_fill_manual(values = c(Deep = clr$deep, REM = clr$rem, Light = clr$light, Wake = clr$wake)) +
-    scale_x_date(date_labels = "%b %d") +
-    labs(x = NULL, y = "Minutes") +
-    theme_minimal() +
-    theme(
-      legend.position = "bottom",
-      plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
-      panel.grid.major = element_line(color = clr$grid_line, linewidth = 0.3),
-      panel.grid.minor = element_blank()
-    )
-  
-  ggplotly(p, tooltip = c("x", "y", "fill")) %>%
-    layout(
-      title = list(text = "Sleep Stages per Night", x = 0.5),
-      xaxis = list(title = ""),
-      yaxis = list(title = "Minutes"),
-      margin = list(l = 50, r = 20, t = 50, b = 40),
-      hoverlabel = list(bgcolor = clr$bg),
-      legend = list(
-        orientation = "h",
-        yanchor = "bottom",
-        y = -0.15,
-        xanchor = "center",
-        x = 0.5
-      )
-    ) %>%
-    style(
-      marker = list(
-        color = ~ifelse(sleep_stage == "Deep", clr$deep,
-                 ifelse(sleep_stage == "REM", clr$rem,
-                 ifelse(sleep_stage == "Light", clr$light,
-                 clr$wake)))
-      )
-    )
-} else {
-  create_empty_plot("No sleep data available")
-}
-
-# ===== FOR APP.R: Add to UI =====
-# Check previous chart ^ for fullscreen code
-# ===== FOR APP.R: Wrap in renderPlotly =====
-# output$sleep_stages_chart <- renderPlotly({
-#   req(sleep_data())
-#
-#   stacked_data <- sleep_data() %>%
-#     filter(sleep_stage %in% c("deep", "rem", "light", "wake")) %>%
-#     group_by(dateOfSleep, sleep_stage) %>%
-#     summarise(minutes = n(), .groups = "drop") %>%
-#     mutate(
-#       sleep_stage = recode(sleep_stage,
-#                           deep = "Deep",
-#                           rem = "REM",
-#                           light = "Light",
-#                           wake = "Wake"),
-#       dateOfSleep = as.Date(dateOfSleep)
-#     )
-#
-#   if (nrow(stacked_data) == 0) {
-#     return(create_empty_plot("No sleep data available for selected filters"))
-#   }
-#
-#   # Use ggplotly with explicit style() to preserve colors
-#   p <- ggplot(stacked_data, aes(x = dateOfSleep, y = minutes, fill = sleep_stage)) +
-#     geom_col(width = 0.7, alpha = 0.9) +
-#     scale_fill_manual(values = c(Deep = clr$deep, REM = clr$rem, Light = clr$light, Wake = clr$wake)) +
-#     scale_x_date(date_labels = "%b %d") +
-#     labs(x = NULL, y = "Minutes") +
-#     theme_minimal() +
-#     theme(
-#       legend.position = "bottom",
-#       plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
-#       panel.grid.major = element_line(color = clr$grid_line, linewidth = 0.3),
-#       panel.grid.minor = element_blank()
-#     )
-#
-#   ggplotly(p, tooltip = c("x", "y", "fill")) %>%
-#     layout(
-#       title = list(text = "Sleep Stages per Night", x = 0.5),
-#       xaxis = list(title = ""),
-#       yaxis = list(title = "Minutes"),
-#       margin = list(l = 50, r = 20, t = 50, b = 40),
-#       hoverlabel = list(bgcolor = clr$bg),
-#       legend = list(
-#         orientation = "h",
-#         yanchor = "bottom",
-#         y = -0.15,
-#         xanchor = "center",
-#         x = 0.5
-#       )
-#     ) %>%
-#     style(
-#       marker = list(
-#         color = ~ifelse(sleep_stage == "Deep", clr$deep,
-#                  ifelse(sleep_stage == "REM", clr$rem,
-#                  ifelse(sleep_stage == "Light", clr$light,
-#                  clr$wake)))
-#       )
-#     )
-# })
 ```
+
+
 
 ### 30. Sleep Efficiency
 
@@ -2098,325 +2031,914 @@ This stacked segmented bar chart visualizes the distribution of sleep stages (De
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # ===== MULTIPLE SLEEP SESSIONS PER DAY =====
-if (exists("sleep_data") && !is.null(sleep_data) && nrow(sleep_data) > 0) {
-  
-  # The 'datetime' column already contains the sleep minute timestamps
-  sleep_clean <- sleep_data %>%
-    mutate(
-      datetime = ymd_hms(datetime),  # Parse the sleep datetime
-      dateOfSleep = as.Date(dateOfSleep)
-    ) %>%
-    # Sort by date and time to identify gaps
-    arrange(dateOfSleep, datetime)
-  
-  # Identify sleep sessions based on time gaps (> 2 hours between records)
-  sleep_with_gaps <- sleep_clean %>%
-    group_by(dateOfSleep) %>%
-    arrange(datetime) %>%
-    mutate(
-      # Time difference from previous record in minutes
-      time_diff = ifelse(
-        is.na(lag(datetime)), 
-        0, 
-        as.numeric(difftime(datetime, lag(datetime), units = "mins"))
-      ),
-      # New session starts when gap > 120 minutes (2 hours)
-      new_session = ifelse(
-        is.na(lag(datetime)) | time_diff > 120,
-        1,
-        0
-      ),
-      # Create session ID within each day
-      session_id = cumsum(new_session)
-    ) %>%
-    ungroup()
-  
-  # Aggregate by session and sleep stage
-  session_data <- sleep_with_gaps %>%
-    filter(sleep_stage %in% c("deep", "rem", "light", "wake")) %>%
-    group_by(dateOfSleep, session_id, sleep_stage) %>%
-    summarise(
-      minutes = n(),
-      .groups = "drop"
-    ) %>%
-    mutate(
-      sleep_stage = recode(sleep_stage,
-                          deep = "Deep",
-                          rem = "REM", 
-                          light = "Light",
-                          wake = "Wake"),
-      # Create session label
-      session_label = paste(
-        format(dateOfSleep, "%b %d"),
-        "-",
-        paste0("Session ", session_id)
-      )
-    )
-  
-  # Check if we have data
-  if (nrow(session_data) > 0) {
-    
-    # Get distinct sessions in chronological order
-    sessions <- session_data %>%
-      group_by(dateOfSleep, session_id, session_label) %>%
-      summarise(.groups = "drop") %>%
-      arrange(dateOfSleep, session_id) %>%
-      pull(session_label)
-    
-    # Convert to factor to maintain order
-    session_data <- session_data %>%
-      mutate(session_label = factor(session_label, levels = sessions))
-    
-    # Create the plot
-    plot_ly(
-      data = session_data,
-      x = ~session_label,
-      y = ~minutes,
-      color = ~sleep_stage,
-      colors = c(Deep = clr$deep, REM = clr$rem, Light = clr$light, Wake = clr$wake),
-      type = "bar",
-      hovertemplate = paste(
-        "<b>%{x}</b><br>",
-        "%{data.name}: %{y} minutes<br>",
-        "<extra></extra>"
-      )
-    ) %>%
-      layout(
-        barmode = "stack",
-        title = list(text = "Sleep Sessions per Day", x = 0.5),
-        xaxis = list(
-          title = "",
-          tickangle = -45,
-          tickfont = list(size = 10)
-        ),
-        yaxis = list(title = "Minutes"),
-        margin = list(l = 50, r = 20, t = 50, b = 100),
-        hoverlabel = list(bgcolor = clr$bg),
-        legend = list(
-          orientation = "h",
-          yanchor = "bottom",
-          y = -0.15,
-          xanchor = "center",
-          x = 0.5,
-          bgcolor = "rgba(255,255,255,0.8)"
-        )
-      )
-  } else {
-    create_empty_plot("No sleep stage data available for sessions")
-  }
-  
-} else {
-  create_empty_plot("No sleep data available")
-}
+# if (exists("sleep_data") && !is.null(sleep_data) && nrow(sleep_data) > 0) {
+#   
+#   # The 'datetime' column already contains the sleep minute timestamps
+#   sleep_clean <- sleep_data %>%
+#     mutate(
+#       datetime = ymd_hms(datetime),  # Parse the sleep datetime
+#       dateOfSleep = as.Date(dateOfSleep)
+#     ) %>%
+#     # Sort by date and time to identify gaps
+#     arrange(dateOfSleep, datetime)
+#   
+#   # Identify sleep sessions based on time gaps (> 2 hours between records)
+#   sleep_with_gaps <- sleep_clean %>%
+#     group_by(dateOfSleep) %>%
+#     arrange(datetime) %>%
+#     mutate(
+#       # Time difference from previous record in minutes
+#       time_diff = ifelse(
+#         is.na(lag(datetime)), 
+#         0, 
+#         as.numeric(difftime(datetime, lag(datetime), units = "mins"))
+#       ),
+#       # New session starts when gap > 120 minutes (2 hours)
+#       new_session = ifelse(
+#         is.na(lag(datetime)) | time_diff > 120,
+#         1,
+#         0
+#       ),
+#       # Create session ID within each day
+#       session_id = cumsum(new_session)
+#     ) %>%
+#     ungroup()
+#   
+#   # Aggregate by session and sleep stage
+#   session_data <- sleep_with_gaps %>%
+#     filter(sleep_stage %in% c("deep", "rem", "light", "wake")) %>%
+#     group_by(dateOfSleep, session_id, sleep_stage) %>%
+#     summarise(
+#       minutes = n(),
+#       .groups = "drop"
+#     ) %>%
+#     mutate(
+#       sleep_stage = recode(sleep_stage,
+#                           deep = "Deep",
+#                           rem = "REM", 
+#                           light = "Light",
+#                           wake = "Wake"),
+#       # Create session label
+#       session_label = paste(
+#         format(dateOfSleep, "%b %d"),
+#         "-",
+#         paste0("Session ", session_id)
+#       )
+#     )
+#   
+#   # Check if we have data
+#   if (nrow(session_data) > 0) {
+#     
+#     # Get distinct sessions in chronological order
+#     sessions <- session_data %>%
+#       group_by(dateOfSleep, session_id, session_label) %>%
+#       summarise(.groups = "drop") %>%
+#       arrange(dateOfSleep, session_id) %>%
+#       pull(session_label)
+#     
+#     # Convert to factor to maintain order
+#     session_data <- session_data %>%
+#       mutate(session_label = factor(session_label, levels = sessions))
+#     
+#     # Create the plot
+#     plot_ly(
+#       data = session_data,
+#       x = ~session_label,
+#       y = ~minutes,
+#       color = ~sleep_stage,
+#       colors = c(Deep = clr$deep, REM = clr$rem, Light = clr$light, Wake = clr$wake),
+#       type = "bar",
+#       hovertemplate = paste(
+#         "<b>%{x}</b><br>",
+#         "%{data.name}: %{y} minutes<br>",
+#         "<extra></extra>"
+#       )
+#     ) %>%
+#       layout(
+#         barmode = "stack",
+#         title = list(text = "Sleep Sessions per Day", x = 0.5),
+#         xaxis = list(
+#           title = "",
+#           tickangle = -45,
+#           tickfont = list(size = 10)
+#         ),
+#         yaxis = list(title = "Minutes"),
+#         margin = list(l = 50, r = 20, t = 50, b = 100),
+#         hoverlabel = list(bgcolor = clr$bg),
+#         legend = list(
+#           orientation = "h",
+#           yanchor = "bottom",
+#           y = -0.15,
+#           xanchor = "center",
+#           x = 0.5,
+#           bgcolor = "rgba(255,255,255,0.8)"
+#         )
+#       )
+#   } else {
+#     create_empty_plot("No sleep stage data available for sessions")
+#   }
+#   
+# } else {
+#   create_empty_plot("No sleep data available")
+# }
 ```
 
-### Breathing Rate ❌Broken
+### Breathing Rate ❌
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # ===== COMBINE SLEEP START (from minute data) WITH BREATHING RATE DATA =====
+# 
+# # 1. Get sleep session start times from minute-level data
+# sleep_starts <- sleep_data %>%
+#   mutate(
+#     datetime = ymd_hms(datetime),
+#     date = as.Date(dateOfSleep)
+#   ) %>%
+#   arrange(date, datetime) %>%
+#   group_by(date) %>%
+#   mutate(
+#     time_diff = ifelse(
+#       is.na(lag(datetime)), 
+#       0, 
+#       as.numeric(difftime(datetime, lag(datetime), units = "mins"))
+#     ),
+#     new_session = ifelse(
+#       is.na(lag(datetime)) | time_diff > 120,
+#       1,
+#       0
+#     ),
+#     session_id = cumsum(new_session)
+#   ) %>%
+#   ungroup() %>%
+#   # Get unique sessions with their start times
+#   group_by(date, session_id) %>%
+#   summarise(
+#     sleep_start = min(datetime),
+#     .groups = "drop"
+#   ) %>%
+#   # Now create labels outside the grouped summarise
+#   group_by(date) %>%
+#   mutate(
+#     total_sessions = n(),
+#     session_label = ifelse(
+#       total_sessions > 1,
+#       paste(format(date, "%b %d"), "Session", session_id),
+#       format(date, "%b %d")
+#     )
+#   ) %>%
+#   ungroup() %>%
+#   arrange(date, session_id)
+# 
+# # 2. Merge with breathing rate data using the date field
+# breathing_with_starts <- breathing_rate_summary %>%
+#   mutate(
+#     date = as.Date(date),
+#     sleep_end = ymd_hms(sleep_end)
+#   ) %>%
+#   # Join on date to get sleep start times
+#   left_join(
+#     sleep_starts %>% select(date, session_id, sleep_start, session_label),
+#     by = "date"
+#   ) %>%
+#   # Handle cases where there are multiple sleep sessions per day
+#   group_by(date) %>%
+#   mutate(
+#     # Calculate which sleep session this breathing data belongs to
+#     # Based on the sleep_end time relative to sleep_start
+#     session_match = ifelse(
+#       n() == 1,
+#       session_id,
+#       case_when(
+#         # If multiple sessions, match by proximity of sleep_end to sleep_start
+#         session_id == which.min(abs(hour(sleep_end) - hour(sleep_start))) ~ session_id,
+#         TRUE ~ NA_real_
+#       )
+#     )
+#   ) %>%
+#   ungroup() %>%
+#   # Keep only matched rows
+#   filter(!is.na(session_match)) %>%
+#   # Clean up the label
+#   mutate(
+#     label = ifelse(
+#       duplicated(date),
+#       paste(format(date, "%b %d"), "Session", session_match),
+#       format(date, "%b %d")
+#     ),
+#     # Create a time label showing both start and end
+#     time_range = paste(
+#       format(sleep_start, "%I:%M %p"),
+#       "-",
+#       format(sleep_end, "%I:%M %p")
+#     )
+#   )
+# 
+# # 3. Create the improved breathing rate chart
+# if (exists("breathing_with_starts") && nrow(breathing_with_starts) > 0) {
+#   
+#   # Sort by date and session
+#   breathing_plot_data <- breathing_with_starts %>%
+#     arrange(date, session_match) %>%
+#     mutate(
+#       label = factor(label, levels = unique(label))
+#     )
+#   
+#   plot_ly() %>%
+#     # Full sleep breathing rate
+#     add_trace(
+#       data = breathing_plot_data,
+#       x = ~label,
+#       y = ~full_sleep_breathing_rate,
+#       name = "Full Sleep",
+#       type = "scatter",
+#       mode = "lines+markers",
+#       line = list(color = "#2C3E50", width = 3),
+#       marker = list(color = "#2C3E50", size = 8),
+#       hovertemplate = paste(
+#         "<b>%{x}</b><br>",
+#         "Time: %{customdata}<br>",
+#         "Full Sleep: %{y:.1f} breaths/min<br>",
+#         "<extra></extra>"
+#       ),
+#       customdata = ~time_range
+#     ) %>%
+#     # Deep sleep breathing rate
+#     add_trace(
+#       data = breathing_plot_data,
+#       x = ~label,
+#       y = ~deep_sleep_breathing_rate,
+#       name = "Deep Sleep",
+#       type = "scatter",
+#       mode = "lines+markers",
+#       line = list(color = clr$deep, width = 2, dash = "dash"),
+#       marker = list(color = clr$deep, size = 6),
+#       hovertemplate = paste(
+#         "<b>%{x}</b><br>",
+#         "Deep Sleep: %{y:.1f} breaths/min<br>",
+#         "<extra></extra>"
+#       )
+#     ) %>%
+#     # Light sleep breathing rate
+#     add_trace(
+#       data = breathing_plot_data,
+#       x = ~label,
+#       y = ~light_sleep_breathing_rate,
+#       name = "Light Sleep",
+#       type = "scatter",
+#       mode = "lines+markers",
+#       line = list(color = clr$light, width = 2, dash = "dash"),
+#       marker = list(color = clr$light, size = 6),
+#       hovertemplate = paste(
+#         "<b>%{x}</b><br>",
+#         "Light Sleep: %{y:.1f} breaths/min<br>",
+#         "<extra></extra>"
+#       )
+#     ) %>%
+#     # REM sleep breathing rate
+#     add_trace(
+#       data = breathing_plot_data,
+#       x = ~label,
+#       y = ~rem_sleep_breathing_rate,
+#       name = "REM Sleep",
+#       type = "scatter",
+#       mode = "lines+markers",
+#       line = list(color = clr$rem, width = 2, dash = "dash"),
+#       marker = list(color = clr$rem, size = 6),
+#       hovertemplate = paste(
+#         "<b>%{x}</b><br>",
+#         "REM Sleep: %{y:.1f} breaths/min<br>",
+#         "<extra></extra>"
+#       )
+#     ) %>%
+#     layout(
+#       title = list(
+#         text = paste(
+#           "Breathing Rate by Sleep Session",
+#           "<br>",
+#           "<sup>Hover for start & end times</sup>"
+#         ),
+#         x = 0.5
+#       ),
+#       xaxis = list(
+#         title = "",
+#         tickangle = -45,
+#         tickfont = list(size = 10),
+#         type = "category"
+#       ),
+#       yaxis = list(
+#         title = "Breaths per Minute",
+#         range = c(12, 19)
+#       ),
+#       margin = list(l = 50, r = 20, t = 80, b = 120),
+#       hoverlabel = list(bgcolor = clr$bg),
+#       legend = list(
+#         orientation = "h",
+#         yanchor = "bottom",
+#         y = -0.25,
+#         xanchor = "center",
+#         x = 0.5,
+#         bgcolor = "rgba(255,255,255,0.8)"
+#       )
+#     )
+#   
+# } else {
+#   create_empty_plot("No matched sleep-breathing data available")
+# }
+```
 
-# 1. Get sleep session start times from minute-level data
-sleep_starts <- sleep_data %>%
-  mutate(
-    datetime = ymd_hms(datetime),
-    date = as.Date(dateOfSleep)
-  ) %>%
-  arrange(date, datetime) %>%
-  group_by(date) %>%
-  mutate(
-    time_diff = ifelse(
-      is.na(lag(datetime)), 
-      0, 
-      as.numeric(difftime(datetime, lag(datetime), units = "mins"))
-    ),
-    new_session = ifelse(
-      is.na(lag(datetime)) | time_diff > 120,
-      1,
-      0
-    ),
-    session_id = cumsum(new_session)
-  ) %>%
-  ungroup() %>%
-  # Get unique sessions with their start times
-  group_by(date, session_id) %>%
+## Professors Charts
+
+### HRV Over the Week
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# ===== CHART 1: HRV LINE PLOT OVER WEEK =====
+# Calculate daily average HRV for cleaner visualization
+hrv_daily <- hrv_data %>%
+  mutate(date_only = as.Date(datetime)) %>%
+  group_by(date_only) %>%
   summarise(
-    sleep_start = min(datetime),
+    avg_rmssd = mean(rmssd_ms, na.rm = TRUE),
+    sd_rmssd = sd(rmssd_ms, na.rm = TRUE),
+    n = n(),
     .groups = "drop"
   ) %>%
-  # Now create labels outside the grouped summarise
-  group_by(date) %>%
-  mutate(
-    total_sessions = n(),
-    session_label = ifelse(
-      total_sessions > 1,
-      paste(format(date, "%b %d"), "Session", session_id),
-      format(date, "%b %d")
-    )
-  ) %>%
-  ungroup() %>%
-  arrange(date, session_id)
+  filter(!is.na(avg_rmssd))
 
-# 2. Merge with breathing rate data using the date field
-breathing_with_starts <- breathing_rate_summary %>%
-  mutate(
-    date = as.Date(date),
-    sleep_end = ymd_hms(sleep_end)
-  ) %>%
-  # Join on date to get sleep start times
-  left_join(
-    sleep_starts %>% select(date, session_id, sleep_start, session_label),
-    by = "date"
-  ) %>%
-  # Handle cases where there are multiple sleep sessions per day
-  group_by(date) %>%
-  mutate(
-    # Calculate which sleep session this breathing data belongs to
-    # Based on the sleep_end time relative to sleep_start
-    session_match = ifelse(
-      n() == 1,
-      session_id,
-      case_when(
-        # If multiple sessions, match by proximity of sleep_end to sleep_start
-        session_id == which.min(abs(hour(sleep_end) - hour(sleep_start))) ~ session_id,
-        TRUE ~ NA_real_
-      )
-    )
-  ) %>%
-  ungroup() %>%
-  # Keep only matched rows
-  filter(!is.na(session_match)) %>%
-  # Clean up the label
-  mutate(
-    label = ifelse(
-      duplicated(date),
-      paste(format(date, "%b %d"), "Session", session_match),
-      format(date, "%b %d")
-    ),
-    # Create a time label showing both start and end
-    time_range = paste(
-      format(sleep_start, "%I:%M %p"),
-      "-",
-      format(sleep_end, "%I:%M %p")
-    )
-  )
-
-# 3. Create the improved breathing rate chart
-if (exists("breathing_with_starts") && nrow(breathing_with_starts) > 0) {
-  
-  # Sort by date and session
-  breathing_plot_data <- breathing_with_starts %>%
-    arrange(date, session_match) %>%
-    mutate(
-      label = factor(label, levels = unique(label))
-    )
-  
+if (exists("hrv_daily") && nrow(hrv_daily) > 0) {
   plot_ly() %>%
-    # Full sleep breathing rate
+    # Add ribbon for standard deviation (optional)
+    add_ribbons(
+      data = hrv_daily,
+      x = ~date_only,
+      ymin = ~avg_rmssd - sd_rmssd,
+      ymax = ~avg_rmssd + sd_rmssd,
+      name = "±1 SD",
+      color = I(clr$hr),
+      opacity = 0.2,
+      showlegend = FALSE
+    ) %>%
+    # Add daily average points with line
     add_trace(
-      data = breathing_plot_data,
-      x = ~label,
-      y = ~full_sleep_breathing_rate,
-      name = "Full Sleep",
+      data = hrv_daily,
+      x = ~date_only,
+      y = ~avg_rmssd,
       type = "scatter",
       mode = "lines+markers",
-      line = list(color = "#2C3E50", width = 3),
-      marker = list(color = "#2C3E50", size = 8),
+      name = "Avg Daily HRV",
+      line = list(color = clr$hr, width = 2),
+      marker = list(color = clr$hr, size = 8),
       hovertemplate = paste(
         "<b>%{x}</b><br>",
-        "Time: %{customdata}<br>",
-        "Full Sleep: %{y:.1f} breaths/min<br>",
-        "<extra></extra>"
+        "Avg HRV: %{y:.1f} ms<br>",
+        "SD: %{customdata:.1f} ms<br>",
+        "Readings: %{text}<extra></extra>"
       ),
-      customdata = ~time_range
+      customdata = ~sd_rmssd,
+      text = ~n
     ) %>%
-    # Deep sleep breathing rate
+    # Add a reference line for typical baseline
     add_trace(
-      data = breathing_plot_data,
-      x = ~label,
-      y = ~deep_sleep_breathing_rate,
-      name = "Deep Sleep",
+      x = range(hrv_daily$date_only),
+      y = c(20, 20),
       type = "scatter",
-      mode = "lines+markers",
-      line = list(color = clr$deep, width = 2, dash = "dash"),
-      marker = list(color = clr$deep, size = 6),
-      hovertemplate = paste(
-        "<b>%{x}</b><br>",
-        "Deep Sleep: %{y:.1f} breaths/min<br>",
-        "<extra></extra>"
-      )
-    ) %>%
-    # Light sleep breathing rate
-    add_trace(
-      data = breathing_plot_data,
-      x = ~label,
-      y = ~light_sleep_breathing_rate,
-      name = "Light Sleep",
-      type = "scatter",
-      mode = "lines+markers",
-      line = list(color = clr$light, width = 2, dash = "dash"),
-      marker = list(color = clr$light, size = 6),
-      hovertemplate = paste(
-        "<b>%{x}</b><br>",
-        "Light Sleep: %{y:.1f} breaths/min<br>",
-        "<extra></extra>"
-      )
-    ) %>%
-    # REM sleep breathing rate
-    add_trace(
-      data = breathing_plot_data,
-      x = ~label,
-      y = ~rem_sleep_breathing_rate,
-      name = "REM Sleep",
-      type = "scatter",
-      mode = "lines+markers",
-      line = list(color = clr$rem, width = 2, dash = "dash"),
-      marker = list(color = clr$rem, size = 6),
-      hovertemplate = paste(
-        "<b>%{x}</b><br>",
-        "REM Sleep: %{y:.1f} breaths/min<br>",
-        "<extra></extra>"
-      )
+      mode = "lines",
+      line = list(color = clr$target_line, dash = "dash", width = 1),
+      name = "Baseline (20 ms)",
+      hoverinfo = "skip"
     ) %>%
     layout(
-      title = list(
-        text = paste(
-          "Breathing Rate by Sleep Session",
-          "<br>",
-          "<sup>Hover for start & end times</sup>"
-        ),
+      title = list(text = "Heart Rate Variability (HRV) Over the Week", x = 0.5),
+      xaxis = list(title = "", tickformat = "%b %d", dtick = 86400000),
+      yaxis = list(title = "RMSSD (ms)", range = c(0, max(hrv_daily$avg_rmssd + 10, 25))),
+      hoverlabel = list(bgcolor = clr$bg),
+      margin = list(l = 50, r = 20, t = 50, b = 40),
+      legend = list(
+        orientation = "h",
+        yanchor = "top",
+        y = -0.15,
+        xanchor = "center",
         x = 0.5
-      ),
+      )
+    )
+} else {
+  create_empty_plot("No HRV data available")
+}
+```
+
+### HRV Heatmap (Days x Hours)
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# ===== CHART 2: HRV HEATMAP =====
+# Prepare data: group by date and hour
+hrv_heatmap_data <- hrv_data %>%
+  mutate(
+    date_only = as.Date(datetime),
+    hour_only = hour(datetime)
+  ) %>%
+  group_by(date_only, hour_only) %>%
+  summarise(
+    avg_rmssd = mean(rmssd_ms, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  # Complete missing hours with NA (so they show as blank)
+  complete(date_only, hour_only = 0:23) %>%
+  # Filter to the date range of interest
+  filter(date_only >= as.Date("2026-05-28"), date_only <= as.Date("2026-06-08"))
+
+if (exists("hrv_heatmap_data") && nrow(hrv_heatmap_data) > 0) {
+  # Create the heatmap
+  plot_ly(
+    data = hrv_heatmap_data,
+    x = ~hour_only,
+    y = ~date_only,
+    z = ~avg_rmssd,
+    type = "heatmap",
+    colorscale = list(
+      c(0, "#2C3E50"),   # Low HRV (dark)
+      c(0.5, clr$hr),    # Medium HRV
+      c(1, "#2ECC71")    # High HRV (green)
+    ),
+    zmin = 5,
+    zmax = 40,
+    hovertemplate = paste(
+      "<b>%{y}</b><br>",
+      "Hour: %{x}:00<br>",
+      "Avg HRV: %{z:.1f} ms<extra></extra>"
+    ),
+    colorbar = list(
+      title = list(text = "RMSSD (ms)", side = "right"),
+      len = 0.8
+    )
+  ) %>%
+    layout(
+      title = list(text = "HRV Heatmap - Hour of Day vs Date", x = 0.5),
       xaxis = list(
-        title = "",
-        tickangle = -45,
-        tickfont = list(size = 10),
-        type = "category"
+        title = "Hour of Day",
+        tickmode = "array",
+        tickvals = seq(0, 23, by = 2),
+        ticktext = sprintf("%02d:00", seq(0, 23, by = 2))
       ),
       yaxis = list(
-        title = "Breaths per Minute",
-        range = c(12, 19)
+        title = "Date",
+        tickformat = "%b %d",
+        autorange = "reversed"  # Most recent date at top
       ),
-      margin = list(l = 50, r = 20, t = 80, b = 120),
+      margin = list(l = 50, r = 50, t = 50, b = 40),
+      hoverlabel = list(bgcolor = clr$bg)
+    )
+} else {
+  create_empty_plot("No HRV heatmap data available")
+}
+```
+
+### Heart Rate Heatmap
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# ===== CHART 3: HEART RATE HEATMAP =====
+# Prepare data: group by date and hour
+hr_heatmap_data <- hr_data %>%
+  mutate(
+    date_only = as.Date(datetime),
+    hour_only = hour(datetime)
+  ) %>%
+  group_by(date_only, hour_only) %>%
+  summarise(
+    avg_hr = mean(heart_rate_avg, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  complete(date_only, hour_only = 0:23) %>%
+  filter(date_only >= as.Date("2026-05-28"), date_only <= as.Date("2026-06-08"))
+
+if (exists("hr_heatmap_data") && nrow(hr_heatmap_data) > 0) {
+  plot_ly(
+    data = hr_heatmap_data,
+    x = ~hour_only,
+    y = ~date_only,
+    z = ~avg_hr,
+    type = "heatmap",
+    colorscale = list(
+      c(0, "#2C3E50"),     # Low HR (dark)
+      c(0.3, clr$hr),      # Medium HR
+      c(0.7, "#E67E22"),   # High HR
+      c(1, "#E74C3C")      # Very high HR (red)
+    ),
+    zmin = 55,
+    zmax = 120,
+    hovertemplate = paste(
+      "<b>%{y}</b><br>",
+      "Hour: %{x}:00<br>",
+      "Avg HR: %{z:.0f} bpm<extra></extra>"
+    ),
+    colorbar = list(
+      title = list(text = "Avg HR (bpm)", side = "right"),
+      len = 0.8
+    )
+  ) %>%
+    layout(
+      title = list(text = "Heart Rate Heatmap - Hour of Day vs Date", x = 0.5),
+      xaxis = list(
+        title = "Hour of Day",
+        tickmode = "array",
+        tickvals = seq(0, 23, by = 2),
+        ticktext = sprintf("%02d:00", seq(0, 23, by = 2))
+      ),
+      yaxis = list(
+        title = "Date",
+        tickformat = "%b %d",
+        autorange = "reversed"
+      ),
+      margin = list(l = 50, r = 50, t = 50, b = 40),
+      hoverlabel = list(bgcolor = clr$bg)
+    )
+} else {
+  create_empty_plot("No heart rate heatmap data available")
+}
+```
+
+### Breathing Rate Line Plot
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# ===== CHART 4: BREATHING RATE LINE PLOT =====
+if (exists("breathing_data") && !is.null(breathing_data) && nrow(breathing_data) > 0) {
+  
+  # Reshape data for easier plotting
+  breathing_long <- breathing_data %>%
+    pivot_longer(
+      cols = c(full_sleep_breathing_rate, deep_sleep_breathing_rate, 
+               light_sleep_breathing_rate, rem_sleep_breathing_rate),
+      names_to = "sleep_stage",
+      values_to = "breathing_rate"
+    ) %>%
+    mutate(
+      sleep_stage = recode(sleep_stage,
+                          full_sleep_breathing_rate = "Full Sleep",
+                          deep_sleep_breathing_rate = "Deep",
+                          light_sleep_breathing_rate = "Light",
+                          rem_sleep_breathing_rate = "REM"),
+      date = as.Date(date)
+    ) %>%
+    filter(!is.na(breathing_rate))
+  
+  # Colors for each stage
+  stage_colors <- c(
+    "Full Sleep" = clr$text_primary,
+    "Deep" = clr$deep,
+    "Light" = clr$light,
+    "REM" = clr$rem
+  )
+  
+  # Line widths - full sleep is thicker
+  stage_linewidth <- c(
+    "Full Sleep" = 2.5,
+    "Deep" = 1.5,
+    "Light" = 1.5,
+    "REM" = 1.5
+  )
+  
+  # Create the plot
+  p <- ggplot(breathing_long, aes(x = date, y = breathing_rate, color = sleep_stage, group = sleep_stage)) +
+    geom_line(aes(linewidth = sleep_stage), alpha = 0.9) +
+    scale_color_manual(values = stage_colors) +
+    scale_linewidth_manual(values = stage_linewidth) +
+    labs(
+      x = NULL,
+      y = "Breaths per Minute"
+    ) +
+    scale_x_date(date_labels = "%b %d") +
+    scale_y_continuous(limits = c(12, 19), breaks = seq(12, 19, by = 1)) +
+    dash_theme() +
+    theme(
+      legend.position = "bottom",
+      legend.title = element_blank()
+    )
+  
+  # Convert to interactive
+  ggplotly(p, tooltip = c("x", "y", "color")) %>%
+    layout(
+      title = list(text = "Breathing Rate by Sleep Stage", x = 0.5),
       hoverlabel = list(bgcolor = clr$bg),
+      margin = list(l = 50, r = 20, t = 50, b = 40),
       legend = list(
         orientation = "h",
         yanchor = "bottom",
-        y = -0.25,
+        y = -0.2,
         xanchor = "center",
-        x = 0.5,
-        bgcolor = "rgba(255,255,255,0.8)"
+        x = 0.5
       )
     )
   
 } else {
-  create_empty_plot("No matched sleep-breathing data available")
+  create_empty_plot("No breathing rate data available")
 }
 ```
 
-###
+### SpO2 Line Plot
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 
+if (exists("spo2_data") && !is.null(spo2_data) && nrow(spo2_data) > 0) {
+  
+  spo2_daily <- spo2_data %>%
+    mutate(date_only = as.Date(datetime)) %>%
+    group_by(date_only) %>%
+    summarise(
+      avg_spo2 = mean(value, na.rm = TRUE),
+      min_spo2 = min(value, na.rm = TRUE),
+      max_spo2 = max(value, na.rm = TRUE),
+      sd_spo2 = sd(value, na.rm = TRUE),
+      n = n(),
+      .groups = "drop"
+    ) %>%
+    filter(n >= 5)
+  
+  if (nrow(spo2_daily) > 0) {
+    
+    plot_ly() %>%
+      # Min-Max range as filled area
+      add_trace(
+        data = spo2_daily,
+        x = ~date_only,
+        y = ~max_spo2,
+        type = "scatter",
+        mode = "lines",
+        fill = "tonexty",
+        fillcolor = paste0(clr$light_blue, "33"),
+        line = list(color = "transparent"),
+        name = "Range",
+        showlegend = TRUE
+      ) %>%
+      add_trace(
+        data = spo2_daily,
+        x = ~date_only,
+        y = ~min_spo2,
+        type = "scatter",
+        mode = "lines",
+        fill = "tonexty",
+        fillcolor = paste0(clr$light_blue, "33"),
+        line = list(color = "transparent"),
+        name = "Range",
+        showlegend = FALSE
+      ) %>%
+      # Average line
+      add_trace(
+        data = spo2_daily,
+        x = ~date_only,
+        y = ~avg_spo2,
+        type = "scatter",
+        mode = "lines+markers",
+        name = "Avg SpO2",
+        line = list(color = clr$blue, width = 2),
+        marker = list(color = clr$blue, size = 6),
+        error_y = list(
+          type = "data",
+          array = ~sd_spo2,
+          color = clr$error_bar
+        ),
+        hovertemplate = paste(
+          "<b>%{x}</b><br>",
+          "Avg: %{y:.1f}%<br>",
+          "Min: %{customdata[0]:.1f}%<br>",
+          "Max: %{customdata[1]:.1f}%<br>",
+          "Readings: %{customdata[2]}<extra></extra>"
+        ),
+        customdata = ~cbind(min_spo2, max_spo2, n)
+      ) %>%
+      # Reference line
+      add_trace(
+        x = range(spo2_daily$date_only),
+        y = c(95, 95),
+        type = "scatter",
+        mode = "lines",
+        line = list(color = clr$target_line, dash = "dash", width = 1),
+        name = "Normal (95%)",
+        hoverinfo = "skip"
+      ) %>%
+      layout(
+        title = list(text = "Blood Oxygen Saturation (SpO2) Over Time", x = 0.5),
+        xaxis = list(title = "", tickformat = "%b %d"),
+        yaxis = list(title = "SpO2 (%)", range = c(88, 100)),
+        hoverlabel = list(bgcolor = clr$bg),
+        margin = list(l = 50, r = 20, t = 50, b = 40),
+        legend = list(
+          orientation = "h",
+          yanchor = "top",
+          y = -0.15,
+          xanchor = "center",
+          x = 0.5
+        )
+      )
+    
+  } else {
+    create_empty_plot("No daily SpO2 data available (needs at least 5 readings per day)")
+  }
+} else {
+  create_empty_plot("No SpO2 data available")
+}
+```
+
+### HRV vs Sleep
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# ===== CHART 6: HRV vs SLEEP MINUTES (WITH LAG) =====
+
+# 1. Calculate daily sleep total minutes
+if (exists("sleep_data") && exists("hrv_data") && 
+    !is.null(sleep_data) && nrow(sleep_data) > 0 && 
+    !is.null(hrv_data) && nrow(hrv_data) > 0) {
+  
+  # Daily sleep minutes
+  sleep_daily <- sleep_data %>%
+    group_by(dateOfSleep) %>%
+    summarise(
+      total_sleep_minutes = n(),
+      .groups = "drop"
+    ) %>%
+    rename(date = dateOfSleep)
+  
+  # Daily HRV average
+  hrv_daily_full <- hrv_data %>%
+    mutate(date = as.Date(datetime)) %>%
+    group_by(date) %>%
+    summarise(
+      hrv_avg = mean(rmssd_ms, na.rm = TRUE),
+      .groups = "drop"
+    )
+  
+  # Merge sleep and HRV data
+  hrv_sleep_data <- sleep_daily %>%
+    full_join(hrv_daily_full, by = "date") %>%
+    filter(!is.na(total_sleep_minutes), !is.na(hrv_avg)) %>%
+    arrange(date)
+  
+  if (nrow(hrv_sleep_data) > 0) {
+    
+    # Create lagged variables
+    hrv_sleep_lag <- hrv_sleep_data %>%
+      mutate(
+        # Sleep minutes (current and lagged)
+        sleep_minutes = total_sleep_minutes,
+        sleep_minutes_lag1 = lag(total_sleep_minutes, 1),
+        sleep_minutes_lag2 = lag(total_sleep_minutes, 2),
+        
+        # HRV (current and lagged)
+        hrv_current = hrv_avg,
+        hrv_lag1 = lag(hrv_avg, 1),
+        hrv_lag2 = lag(hrv_avg, 2)
+      ) %>%
+      filter(!is.na(hrv_current), !is.na(sleep_minutes))
+    
+    # Create plot with multiple traces
+    plot_ly() %>%
+      # Current day: Sleep vs HRV (same day)
+      add_trace(
+        data = hrv_sleep_lag,
+        x = ~sleep_minutes,
+        y = ~hrv_current,
+        type = "scatter",
+        mode = "markers",
+        name = "Same Day",
+        marker = list(
+          color = clr$hr,
+          size = 10,
+          opacity = 0.8
+        ),
+        text = ~paste(
+          "Date:", format(date, "%b %d"),
+          "<br>Sleep:", sleep_minutes, "min",
+          "<br>HRV:", round(hrv_current, 1), "ms"
+        ),
+        hoverinfo = "text"
+      ) %>%
+      # Previous day sleep vs current HRV (sleep -> HRV)
+      add_trace(
+        data = hrv_sleep_lag %>% filter(!is.na(sleep_minutes_lag1)),
+        x = ~sleep_minutes_lag1,
+        y = ~hrv_current,
+        type = "scatter",
+        mode = "markers",
+        name = "Sleep → HRV (1-day lag)",
+        marker = list(
+          color = clr$blue,
+          size = 10,
+          opacity = 0.8,
+          symbol = "square"
+        ),
+        text = ~paste(
+          "Sleep Date:", format(date - 1, "%b %d"),
+          "<br>Sleep:", sleep_minutes_lag1, "min",
+          "<br>Next Day HRV:", round(hrv_current, 1), "ms"
+        ),
+        hoverinfo = "text"
+      ) %>%
+      # Current HRV vs next day sleep (HRV -> sleep)
+      add_trace(
+        data = hrv_sleep_lag %>% filter(!is.na(hrv_lag1)),
+        x = ~sleep_minutes,
+        y = ~hrv_lag1,
+        type = "scatter",
+        mode = "markers",
+        name = "HRV → Sleep (1-day lag)",
+        marker = list(
+          color = clr$green,
+          size = 10,
+          opacity = 0.8,
+          symbol = "diamond"
+        ),
+        text = ~paste(
+          "HRV Date:", format(date, "%b %d"),
+          "<br>HRV:", round(hrv_lag1, 1), "ms",
+          "<br>Next Day Sleep:", sleep_minutes, "min"
+        ),
+        hoverinfo = "text"
+      ) %>%
+      # Add trend lines (optional - only if we have enough data)
+      layout(
+        title = list(
+          text = "HRV vs Sleep Minutes (with Lag Analysis)",
+          x = 0.5
+        ),
+        xaxis = list(
+          title = "Sleep Minutes",
+          range = c(0, max(hrv_sleep_lag$sleep_minutes, 
+                          hrv_sleep_lag$sleep_minutes_lag1, na.rm = TRUE) + 50)
+        ),
+        yaxis = list(
+          title = "HRV (RMSSD ms)",
+          range = c(0, max(hrv_sleep_lag$hrv_current, 
+                          hrv_sleep_lag$hrv_lag1, na.rm = TRUE) + 10)
+        ),
+        margin = list(l = 50, r = 20, t = 60, b = 40),
+        hoverlabel = list(bgcolor = clr$bg),
+        legend = list(
+          orientation = "h",
+          yanchor = "top",
+          y = -0.2,
+          xanchor = "center",
+          x = 0.5
+        ),
+        annotations = list(
+          list(
+            x = 0.5,
+            y = 1.02,
+            xref = "paper",
+            yref = "paper",
+            text = "• Same Day: HRV vs sleep on same date<br>• Sleep → HRV: Does sleep affect next day's HRV?<br>• HRV → Sleep: Does HRV affect next day's sleep?",
+            showarrow = FALSE,
+            font = list(size = 10, color = clr$text_secondary),
+            align = "center"
+          )
+        )
+      )
+    
+  } else {
+    create_empty_plot("No overlapping sleep and HRV data")
+  }
+  
+} else {
+  create_empty_plot("Sleep or HRV data not available")
+}
+```
+
+### HRV vs Sleep Min
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+# ===== CHART 7: HRV vs SLEEP MINUTES - SCATTER WITH REGRESSION =====
+# This is a simpler version focusing on the same-day relationship
+
+if (exists("hrv_sleep_data") && nrow(hrv_sleep_data) > 0) {
+  
+  # Calculate correlation
+  cor_value <- cor(hrv_sleep_data$total_sleep_minutes, 
+                   hrv_sleep_data$hrv_avg, 
+                   use = "complete.obs")
+  
+  # Create ggplot with regression line
+  p <- ggplot(hrv_sleep_data, aes(x = total_sleep_minutes, y = hrv_avg)) +
+    geom_point(color = clr$hr, size = 3, alpha = 0.7) +
+    geom_smooth(method = "lm", se = TRUE, color = clr$blue, 
+                fill = clr$hr, alpha = 0.2) +
+    labs(
+      x = "Total Sleep Minutes",
+      y = "Average HRV (RMSSD ms)"
+    ) +
+    annotate("text", 
+             x = max(hrv_sleep_data$total_sleep_minutes) * 0.75,
+             y = max(hrv_sleep_data$hrv_avg) * 0.95,
+             label = paste("r =", round(cor_value, 2)),
+             size = 4,
+             color = clr$text_secondary) +
+    dash_theme()
+  
+  ggplotly(p, tooltip = c("x", "y")) %>%
+    layout(
+      title = list(text = "HRV vs Sleep Minutes", x = 0.5),
+      hoverlabel = list(bgcolor = clr$bg),
+      margin = list(l = 50, r = 20, t = 50, b = 40)
+    )
+  
+} else {
+  create_empty_plot("No data available for HRV vs Sleep correlation")
+}
 ```
 
 ###
