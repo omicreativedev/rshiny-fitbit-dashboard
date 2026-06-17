@@ -11,6 +11,11 @@ body {
   min-height: 100vh;
 }
 
+/*The day dropdowns*/
+#study_day_start, #study_day_end {
+  width: 130px !important;
+}
+
 /* ============================================================
    TOP BAR
    ============================================================ */
