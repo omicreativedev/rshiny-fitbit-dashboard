@@ -244,7 +244,7 @@ create_empty_plot <- function(message) {
 # ============================================================================
 
 ui <- fluidPage(
-  title = "FitBit Research Dashboard",
+  title = "Simmons University | FitBit Research Dashboard",
   useShinyjs(),
   
   tags$head(
@@ -253,22 +253,17 @@ ui <- fluidPage(
   
   # ==================== TOP BAR ====================
   div(class = "top-bar",
-      h3("Fitbit Research Dashboard"),
+      h3("Simmons University | Fitbit Research Dashboard"),
       p("Physiological & Psychological Effects of Discrimination - STARS Program & BU Labs")
   ),
   
   # ==================== LOGIN SECTION ====================
   div(class = "login-section",
-      div(class = "login-form",
-          textInput("participant_id", NULL, 
-                    placeholder = "Enter your Participant ID",
-                    width = "220px"),
-          actionButton("login_btn", "Login", class = "btn-primary")
-      ),
+      uiOutput("login_ui"),
       div(class = "user-info", textOutput("login_status"))
   ),
   
-  # ==================== MAIN APP (hidden until login) ====================
+  # ==================== MAIN APP (hidden until Logged In) ====================
   div(id = "main_app", style = "display: none;",
       
       # ========== FILTERS ROW ==========
@@ -328,6 +323,37 @@ server <- function(input, output, session) {
     is_admin = FALSE,
     selected_participant = NULL
   )
+  
+  # ==================== LOGIN UI (swaps form ↔ logout button) ====================
+  
+  output$login_ui <- renderUI({
+    if (auth$logged_in) {
+      div(class = "login-form",
+          actionButton("logout_btn", "Logout", class = "btn-danger")
+      )
+    } else {
+      div(class = "login-form",
+          textInput("participant_id", NULL,
+                    placeholder = "Enter your Participant ID",
+                    width = "220px"),
+          actionButton("login_btn", "Login", class = "btn-primary")
+      )
+    }
+  })
+  
+  # ==================== LOGOUT HANDLER ====================
+  
+  observeEvent(input$logout_btn, {
+    auth$logged_in         <- FALSE
+    auth$participant_id    <- NULL
+    auth$is_admin          <- FALSE
+    auth$selected_participant <- NULL
+    
+    shinyjs::hide("main_app")
+    shinyjs::hide("admin_selector_container")
+    
+    output$login_status <- renderText({ "" })
+  })
   
   # ==================== DATA LOADING ====================
   
