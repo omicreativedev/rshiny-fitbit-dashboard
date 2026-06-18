@@ -15,6 +15,14 @@ clr <- list(
   spo2     = "#009E73",  # green
   bg       = "#FFFFFF",  # white
   
+  walk     = "#D55E00",  # vermillion
+  bike     = "#CC79A7",  # purple
+  run      = "#E69F00",  # orange
+  sport    = "#009E73",  # green
+  workout  = "#F5C710",  # yellow
+  swim     = "#0072B2",  # blue
+  yoga     = "#000000",  # black
+  
   fat_burn = "#56B4E9",  # lightblue
   cardio   = "#F5C710",  # yellow
   peak     = "#D55E00",  # vermillion

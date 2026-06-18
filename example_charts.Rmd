@@ -1,6 +1,6 @@
 ---
 title: "Example Charts for Fitbit Dashboard"
-author: "Salome"
+author: "Selma and Salome, Simmons University"
 date: "`r Sys.Date()`"
 output: 
   html_document:
@@ -11,6 +11,8 @@ output:
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
 # SET UP WORKBOOK 
+# These libraries need to be installed using install.packages("package_name")
+# before running this codeblock. After installing packages, run renv::snapshot()
 library(tidyverse)
 library(lubridate)
 library(plotly)
@@ -20,19 +22,22 @@ library(knitr)
 library(see)
 ```
 
-
-
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
-# Source colour palette
-# source("R/colours.R")
+# Color Palette for Plotly Charts
+# Find UI colors and styling in www\custom.css
+# This is placed here directly to circumvent some errors in plot_ly and ggplotly
+# where R Studio may have trouble finding linked sheets for very large
+# workbooks. This section speeds things up.
 
-# R/colours.R
-# Okabe-Ito color palette - Colorblind accessible
+# source("R/colours.R") # uncomment to try to use external colours.
+
+# Based on Okabe-Ito color palette - Colorblind accessible
 # Source: Okabe, M., & Ito, K. (2008)
 
 # Data colors - mapped to metrics
 clr <- list(
   hr       = "#D55E00",  # vermillion
+  hrv      = "#D55E00",  # vermillion
   steps    = "#0072B2",  # blue
   deep     = "#009E73",  # green
   light    = "#56B4E9",  # lightblue
@@ -75,17 +80,19 @@ clr <- list(
 
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
-# Load all CSV files from csvdata ------------------------------------
 
-# Get list of all CSV files in csvdata folder
-csv_files <- list.files("csvdata", pattern = "\\.csv$", full.names = FALSE)
+# Load all CSV files from csvdata_sarah
+# This would normally be from csvdata
+
+# Get list of all CSV files in csvdata_sarah folder
+csv_files <- list.files("csvdata_sarah", pattern = "\\.csv$", full.names = FALSE)
 
 # Remove .csv extension to use as variable names
 file_names <- gsub("\\.csv$", "", csv_files)
 
 # Load each file into a variable with the same name
 for (i in seq_along(csv_files)) {
-  file_path <- file.path("csvdata", csv_files[i])
+  file_path <- file.path("csvdata_sarah", csv_files[i])
   var_name <- file_names[i]
   assign(var_name, read.csv(file_path, stringsAsFactors = FALSE))
   #cat("Loaded:", var_name, "-", nrow(get(var_name)), "rows\n")
