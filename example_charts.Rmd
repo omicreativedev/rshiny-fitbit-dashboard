@@ -480,45 +480,6 @@ if (exists("daily_steps_chart") && !is.null(daily_steps_chart) && nrow(daily_ste
 } else {
   create_empty_plot("No steps data available")
 }
-
-# ===== FOR APP.R: Add to UI =====
-# shinyfullscreen::fullscreen_this(
-#   plotlyOutput("plot_steps"),
-#   click_to_fullscreen = TRUE
-# )
-#
-# ===== FOR APP.R: Wrap in renderPlotly =====
-# output$plot_steps <- renderPlotly({
-#   req(steps_data())
-#   
-#   df <- steps_data()
-#   if (is.null(df) || nrow(df) == 0) {
-#     return(create_empty_plot("No steps data available"))
-#   }
-#   
-#   daily_steps <- df %>%
-#     mutate(date = as.Date(date)) %>%
-#     group_by(date) %>%
-#     summarise(total = sum(steps_5min, na.rm = TRUE))
-#   
-#   if (nrow(daily_steps) == 0) {
-#     return(create_empty_plot("No steps data for selected date range"))
-#   }
-#   
-#   p <- ggplot(daily_steps, aes(x = date, y = total)) +
-#     geom_col(fill = clr$steps, width = 0.7, alpha = 0.9) +
-#     geom_hline(yintercept = 10000, linetype = "dashed", 
-#                color = "#9CA3AF", linewidth = 0.5) +
-#     scale_y_continuous(labels = scales::comma) +
-#     scale_x_date(date_labels = "%b %d") +
-#     labs(x = NULL, y = "steps") +
-#     theme(plot.title = element_text(hjust = 0.5)) +
-#     dash_theme()
-#   
-#   ggplotly(p) %>% 
-#     layout(hoverlabel = list(bgcolor = clr$bg),
-#            margin = list(l = 50, r = 20, t = 50, b = 40))
-# })
 ```
 
 ### 7. Sleep Stage Breakdown
@@ -540,10 +501,6 @@ if (exists("sleep_data") && !is.null(sleep_data) && nrow(sleep_data) > 0) {
                           light = "Light"),
       dateOfSleep = as.Date(dateOfSleep)
     )
-  
-  # Optional: Filter to specific date range if needed
-  # sleep_summary <- sleep_summary %>%
-  #   filter(dateOfSleep >= as.Date("2026-05-28"), dateOfSleep <= as.Date("2026-06-08"))
 }
 
 # ===== CHART CODE =====
@@ -583,66 +540,6 @@ if (exists("sleep_summary") && !is.null(sleep_summary) && nrow(sleep_summary) > 
 } else {
   create_empty_plot("No sleep data available")
 }
-
-# ===== FOR APP.R: Add to UI =====
-# shinyfullscreen::fullscreen_this(
-#   plotlyOutput("plot_sleep"),
-#   click_to_fullscreen = TRUE
-# )
-#
-# ===== FOR APP.R: Wrap in renderPlotly =====
-# output$plot_sleep <- renderPlotly({
-#   req(sleep_data())
-#   
-#   df <- sleep_data()
-#   if (is.null(df) || nrow(df) == 0) {
-#     return(create_empty_plot("No sleep data available"))
-#   }
-#   
-#   # Aggregate sleep stages per night
-#   sleep_summary <- df %>%
-#     group_by(dateOfSleep, sleep_stage) %>%
-#     summarise(minutes = n(), .groups = "drop") %>%
-#     filter(sleep_stage %in% c("deep", "rem", "light")) %>%
-#     mutate(sleep_stage = recode(sleep_stage,
-#                                 deep = "Deep",
-#                                 rem = "REM",
-#                                 light = "Light"))
-#   
-#   if (nrow(sleep_summary) == 0) {
-#     return(create_empty_plot("No sleep stage data available"))
-#   }
-#   
-#   p <- ggplot(sleep_summary, aes(x = as.Date(dateOfSleep), y = minutes, fill = sleep_stage)) +
-#     geom_col(width = 0.7, alpha = 0.9) +
-#     scale_fill_manual(values = c(Deep = clr$deep, REM = clr$rem, Light = clr$light)) +
-#     scale_x_date(date_labels = "%b %d") +
-#     labs(x = NULL, y = "minutes") +
-#     dash_theme()
-#   
-#   ggplotly(p) %>% 
-#     layout(
-#       hoverlabel = list(bgcolor = clr$bg),
-#       title = list(text = "Daily Sleep States", x = 0.5),
-#       margin = list(l = 50, r = 20, t = 50, b = 40),
-#       legend = list(
-#         orientation = "h",
-#         yanchor = "bottom",
-#         y = -0.15,
-#         xanchor = "center",
-#         x = 0.5,
-#         bgcolor = "rgba(255,255,255,0.8)"
-#       )
-#     ) %>%
-#     # ADD THIS: Explicitly set colors in Plotly
-#     style(
-#       marker = list(
-#         color = ~ifelse(sleep_stage == "Deep", clr$deep,
-#                  ifelse(sleep_stage == "REM", clr$rem,
-#                  clr$light))
-#       )
-#     )
-# })
 ```
 
 ### 8. Sleep Stage Distribution
@@ -751,53 +648,6 @@ ggplotly(hr_timeseries_plot, tooltip = c("x", "y")) %>%
     legend = list(orientation = "h", yanchor = "bottom", y = 1.02, xanchor = "right", x = 1)
   )
 
-# ===== FOR APP.R: Add to UI =====
-# To use shinyfullscreen package to allow shiny app charts to full screen,
-# we added library(shinyfullscreen) to app.R and we need to wrap the plotlyOutput
-# in the UI section like this:
-#
-# shinyfullscreen::fullscreen_this(
-#         plotlyOutput("hr_timeseries"),
-#         click_to_fullscreen = TRUE
-# )
-#
-# We should do this for every chart :)
-#
-# ===== FOR APP.R: Wrap in renderPlotly =====
-# output$hr_timeseries <- renderPlotly({
-#   req(hr_data())
-#   
-#   # Filter out invalid HR values
-#   chart_data <- hr_data() %>%
-#     filter(!is.na(datetime), heart_rate_avg > 30, heart_rate_avg < 220)
-#   
-#   if (nrow(chart_data) == 0) {
-#     return(create_empty_plot("No heart rate data available for selected filters"))
-#   }
-#   
-#   hr_timeseries_plot <- ggplot(chart_data, aes(x = datetime, y = heart_rate_avg)) +
-#     geom_line(color = clr$hr, linewidth = 0.3, alpha = 0.5) +
-#     geom_smooth(method = "loess", span = 0.1, se = FALSE, 
-#                 color = clr$hr, linewidth = 0.5, alpha = 0.9) +
-#     labs(x = "Date and Time", y = "Heart Rate (beats per minute)") +
-#     scale_x_datetime(date_labels = "%b %d, %H:%M", date_breaks = "12 hours") +
-#     scale_y_continuous(limits = c(55, 150), breaks = seq(40, 150, by = 20)) +
-#     dash_theme() +
-#     theme(
-#           axis.text.x = element_text(size = 8),  # Makes X-axis tick labels smaller
-#           axis.text.y = element_text(size = 8),  # Makes Y-axis tick labels smaller
-#           axis.title.x = element_text(size = 9), # Optional: Makes X-axis title smaller
-#           axis.title.y = element_text(size = 9)  # Optional: Makes Y-axis title smaller
-#     )
-#   
-#   ggplotly(hr_timeseries_plot, tooltip = c("x", "y")) %>%
-#     layout(
-#         xaxis = list(tickangle = -45),
-#         hoverlabel = list(bgcolor = clr$bg, font = list(size = 10)),
-#         title = list(text = "Heart Rate Over Time", x = 0.5),
-#         margin = list(l = 50, r = 20, t = 50, b = 40),
-#         legend = list(orientation = "h", yanchor = "bottom", y = 1.02, xanchor = "right", x = 1)
-# })
 ```
 
 ### 15. Heart Rate by Hour
@@ -852,50 +702,6 @@ ggplotly(hr_by_hour_plot, tooltip = c("x", "y", "ymin", "ymax")) %>%
     margin = list(l = 50, r = 20, t = 50, b = 40),
     legend = list(orientation = "h", yanchor = "bottom", y = 1.02)
   )
-
-# ===== FOR APP.R: Add to UI =====
-# Check previous chart ^ for fullscreen code
-# ===== FOR APP.R: Wrap in renderPlotly =====
-# output$hr_by_hour <- renderPlotly({
-#   req(hr_data())
-#   
-#   chart_data <- hr_data() %>%
-#     filter(!is.na(datetime), heart_rate_avg > 30, heart_rate_avg < 220) %>%
-#     mutate(
-#       hour_of_day = hour(datetime),
-#       hour_label = sprintf("%02d:00", hour_of_day)
-#     ) %>%
-#     group_by(hour_of_day, hour_label) %>%
-#     summarise(
-#       avg_heart_rate = mean(heart_rate_avg, na.rm = TRUE),
-#       sd_heart_rate = sd(heart_rate_avg, na.rm = TRUE),
-#       .groups = "drop"
-#     )
-#   
-#   if (nrow(chart_data) == 0) {
-#     return(create_empty_plot("No heart rate data available for selected filters"))
-#   }
-#   
-#   hr_by_hour_plot <- ggplot(chart_data, aes(x = hour_of_day, y = avg_heart_rate)) +
-#     geom_col(fill = clr$hr, width = 0.7, alpha = 0.8) +
-#     geom_errorbar(aes(ymin = avg_heart_rate - sd_heart_rate, 
-#                       ymax = avg_heart_rate + sd_heart_rate),
-#                   width = 0.3, color = clr$error_bar, linewidth = 0.4) +
-#     geom_smooth(method = "loess", se = FALSE, color = clr$target_line, linewidth = 0.8, linetype = "dashed") +
-#     labs(x = "Hour of Day", y = "Average Heart Rate (beats per minute)") +
-#     scale_x_continuous(breaks = seq(0, 23, by = 2), labels = sprintf("%02d:00", seq(0, 23, by = 2))) +
-#     scale_y_continuous(limits = c(55, 110), breaks = seq(55, 110, by = 10)) +
-#     dash_theme() +
-#     theme(panel.grid.major.x = element_blank())
-#   
-#   ggplotly(hr_by_hour_plot, tooltip = c("x", "y", "ymin", "ymax")) %>%
-#     layout(
-#       hoverlabel = list(bgcolor = clr$bg),
-#       title = list(text = "Average Heart RateBy Hour", x = 0.5),
-#       margin = list(l = 50, r = 20, t = 50, b = 40),
-#       legend = list(orientation = "h", yanchor = "bottom", y = 1.02)
-#     )
-# })
 ```
 
 ### 16. Daily Min/Avg/Max Heart Rate
@@ -950,61 +756,6 @@ plot_ly() %>%
     margin     = list(l = 50, r = 20, t = 50, b = 60)
   )
 
-# ===== FOR APP.R: Add to UI =====
-# Check previous chart ^ for fullscreen code
-
-# ===== FOR APP.R: Wrap in renderPlotly =====
-# output$hr_daily_stats <- renderPlotly({
-#   req(hr_data())
-#
-#   chart_data <- hr_data() %>%
-#     filter(!is.na(datetime), heart_rate_avg > 30, heart_rate_avg < 220) %>%
-#     mutate(date_only = as.Date(datetime)) %>%
-#     group_by(date_only) %>%
-#     summarise(
-#       min_hr = min(heart_rate_avg, na.rm = TRUE),
-#       avg_hr = mean(heart_rate_avg, na.rm = TRUE),
-#       max_hr = max(heart_rate_avg, na.rm = TRUE),
-#       .groups = "drop"
-#     )
-#
-#   if (nrow(chart_data) == 0) {
-#     return(create_empty_plot("No heart rate data available for selected filters"))
-#   }
-#
-#   plot_ly() %>%
-#     add_trace(
-#       data = chart_data,
-#       x = ~date_only, y = ~min_hr,
-#       type = "scatter", mode = "lines+markers",
-#       name = "Minimum HR",
-#       line   = list(color = clr$min, width = 0.5),
-#       marker = list(color = clr$min, size = 6, opacity = 0.7)
-#     ) %>%
-#     add_trace(
-#       data = chart_data,
-#       x = ~date_only, y = ~avg_hr,
-#       type = "scatter", mode = "lines+markers",
-#       name = "Average HR",
-#       line   = list(color = clr$avg, width = 0.5),
-#       marker = list(color = clr$avg, size = 6, opacity = 0.7)
-#     ) %>%
-#     add_trace(
-#       data = chart_data,
-#       x = ~date_only, y = ~max_hr,
-#       type = "scatter", mode = "lines+markers",
-#       name = "Maximum HR",
-#       line   = list(color = clr$max, width = 0.5),
-#       marker = list(color = clr$max, size = 6, opacity = 0.7)
-#     ) %>%
-#     layout(
-#       xaxis      = list(title = "Date", tickformat = "%b %d", dtick = 86400000),
-#       yaxis      = list(title = "Heart Rate (beats per minute)", range = c(40, 160), tickvals = seq(40, 160, by = 20)),
-#       legend     = list(orientation = "h", xanchor = "center", x = 0.5, yanchor = "top", y = -0.2),
-#       hoverlabel = list(bgcolor = clr$bg),
-#       margin     = list(l = 50, r = 20, t = 50, b = 60)
-#     )
-# })
 ```
 
 ### 17. Activity Zone Minutes
@@ -1078,80 +829,6 @@ plot_ly() %>%
     title      = list(text = "Activity Zone Minutes", x = 0.5),
     margin    = list(l = 50, r = 20, t = 50, b = 60)
   )
-
-# ===== FOR APP.R: Add to UI =====
-# Check previous chart ^ for fullscreen code
-
-# ===== FOR APP.R: Wrap in renderPlotly =====
-# output$hr_zone_minutes <- renderPlotly({
-#   req(zone_data())
-#
-#   chart_data <- zone_data() %>%
-#     filter(!is.na(datetime)) %>%
-#     mutate(date_only = as.Date(datetime)) %>%
-#     group_by(date_only) %>%
-#     summarise(
-#       fat_burn = sum(fat_burn_minutes, na.rm = TRUE),
-#       cardio   = sum(cardio_minutes,   na.rm = TRUE),
-#       peak     = sum(peak_minutes,     na.rm = TRUE),
-#       total_active = fat_burn + cardio + peak,
-#       .groups = "drop"
-#     )
-#
-#   if (nrow(chart_data) == 0) {
-#     return(create_empty_plot("No heart rate zone data available for selected filters"))
-#   }
-#
-#   plot_ly() %>%
-#     add_bars(
-#       data = chart_data,
-#       x = ~date_only, y = ~fat_burn,
-#       name = "Fat Burn Zone",
-#       marker = list(color = clr$fat_burn, opacity = 0.9)
-#     ) %>%
-#     add_bars(
-#       data = chart_data,
-#       x = ~date_only, y = ~cardio,
-#       name = "Cardio Zone",
-#       marker = list(color = clr$cardio, opacity = 0.9)
-#     ) %>%
-#     add_bars(
-#       data = chart_data,
-#       x = ~date_only, y = ~peak,
-#       name = "Peak Zone",
-#       marker = list(color = clr$peak, opacity = 0.9)
-#     ) %>%
-#     add_annotations(
-#       data = filter(chart_data, total_active > 0),
-#       x = ~date_only, y = ~total_active,
-#       text = ~total_active,
-#       showarrow = FALSE,
-#       yshift = 8,
-#       font = list(color = clr$error_bar, size = 10)
-#     ) %>%
-#     add_segments(
-#       x = min(chart_data$date_only), xend = max(chart_data$date_only),
-#       y = 21, yend = 21,
-#       line = list(color = clr$grid_line, width = 0.5, dash = "dash"),
-#       showlegend = FALSE
-#     ) %>%
-#     add_annotations(
-#       x = min(chart_data$date_only), y = 23,
-#       text = "Daily target (150 min/week)",
-#       showarrow = FALSE,
-#       xanchor = "left",
-#       font = list(color = clr$grid_line, size = 9)
-#     ) %>%
-#     layout(
-#       barmode    = "stack",
-#       autosize   = TRUE,
-#       xaxis      = list(title = "Date", tickformat = "%b %d", dtick = 86400000),
-#       yaxis      = list(title = "Minutes", range = c(0, max(chart_data$total_active, na.rm = TRUE) + 15), tickvals = seq(0, 100, by = 20)),
-#       legend     = list(orientation = "h", xanchor = "center", x = 0.5, yanchor = "top", y = -0.2),
-#       hoverlabel = list(bgcolor = clr$bg),
-#       margin     = list(l = 50, r = 20, t = 20, b = 60)
-#     )
-# })
 ```
 
 ## 18. Admin: HRV Time Series
@@ -1209,40 +886,6 @@ ggplotly(hrv_timeseries_plot, tooltip = c("x", "y")) %>%
       font = list(size = 10, color = clr$text_secondary)
     )
   )
-
-# ===== FOR APP.R: Add to UI =====
-# Check previous chart ^ for fullscreen code
-# ===== FOR APP.R: Wrap in renderPlotly =====
-# output$hrv_chart <- renderPlotly({
-#   req(hrv_data())
-#   
-#   chart_data <- hrv_data() %>%
-#     filter(!is.na(datetime), rmssd_ms > 0, rmssd_ms < 200)
-#   
-#   if (nrow(chart_data) == 0) {
-#     return(create_empty_plot("No HRV data available for selected filters"))
-#   }
-#   
-#   # Calculate rolling average (need zoo package)
-#   # library(zoo) - add to app.R
-#   chart_data <- chart_data %>%
-#     arrange(datetime) %>%
-#     mutate(rolling_avg = zoo::rollapply(rmssd_ms, width = min(10, n()), FUN = mean, fill = NA, align = "center"))
-#   
-#   hrv_timeseries_plot <- ggplot(chart_data, aes(x = datetime, y = rmssd_ms)) +
-#     geom_point(color = clr$hr, alpha = 0.4, size = 1) +
-#     geom_smooth(method = "loess", se = TRUE, fill = "#E24B4A20", color = clr$hr, linewidth = 1) +
-#     geom_line(aes(y = rolling_avg), color = "#1A1A2E", linewidth = 0.5, alpha = 0.6, na.rm = TRUE) +
-#     geom_hline(yintercept = 20, linetype = "dashed", color = "#9CA3AF", linewidth = 0.4) +
-#     labs(x = "Date and Time", y = "RMSSD (milliseconds)", 
-#          caption = "Higher HRV indicates better recovery | Lower HRV may indicate stress or fatigue") +
-#     scale_x_datetime(date_labels = "%b %d", date_breaks = "1 day") +
-#     scale_y_continuous(limits = c(0, 60), breaks = seq(0, 60, by = 10)) +
-#     dash_theme()
-#   
-#   ggplotly(hrv_timeseries_plot, tooltip = c("x", "y")) %>%
-#     layout(hoverlabel = list(bgcolor = "white"))
-# })
 ```
 
 
@@ -1394,173 +1037,6 @@ hypnogram_plot <- plot_ly() %>%
 # Display the plot
 hypnogram_plot
 
-# ===== FOR APP.R: Add to UI ===== #
-# In UI, add:
-# selectInput("sleep_session", "Select Sleep Session", choices = NULL)
-#
-# shinyfullscreen::fullscreen_this(
-#   plotlyOutput("hypnogram_chart"),
-#   click_to_fullscreen = TRUE
-# )
-
-# ===== FOR APP.R: Wrap in renderPlotly ===== #
-# output$hypnogram_chart <- renderPlotly({
-#   req(sleep_data(), input$hypnogram_date)
-#   
-#   target_date_shiny <- as.Date(input$hypnogram_date)
-#   
-#   # Identify all sleep sessions and create dropdown choices
-#   sleep_sessions_shiny <- sleep_data() %>%
-#     filter(dateOfSleep == target_date_shiny) %>%
-#     group_by(logId) %>%
-#     summarise(
-#       session_start = min(as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")),
-#       session_end = max(as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")),
-#       duration_minutes = n(),
-#       .groups = "drop"
-#     ) %>%
-#     mutate(
-#       session_label = paste(format(session_start, "%H:%M"), "-", format(session_end, "%H:%M")),
-#       session_choice = paste(session_label, "(", duration_minutes, "min)")
-#     )
-#   
-#   # Update dropdown choices
-#   updateSelectInput(session, "sleep_session", 
-#                     choices = setNames(sleep_sessions_shiny$logId, sleep_sessions_shiny$session_choice),
-#                     selected = sleep_sessions_shiny$logId[1])
-#   
-#   # Get selected session
-#   selected_session <- input$sleep_session
-#   
-#   # If nothing selected yet, use first session
-#   if(is.null(selected_session)) {
-#     selected_session <- sleep_sessions_shiny$logId[1]
-#   }
-#   
-#   # Prepare hypnogram data for selected session
-#   hypnogram_data_shiny <- sleep_data() %>%
-#     filter(dateOfSleep == target_date_shiny) %>%
-#     filter(logId == selected_session) %>%
-#     filter(sleep_stage %in% c("wake", "light", "deep", "rem", "asleep")) %>%
-#     mutate(
-#       datetime_utc = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
-#       time_num = hour(datetime_utc) + minute(datetime_utc) / 60,
-#       stage_numeric = case_when(
-#         sleep_stage == "wake" ~ 4,
-#         sleep_stage == "rem" ~ 3,
-#         sleep_stage == "light" ~ 2,
-#         sleep_stage == "deep" ~ 1,
-#         sleep_stage == "asleep" ~ 2
-#       ),
-#       stage_label = case_when(
-#         sleep_stage == "wake" ~ "Wake",
-#         sleep_stage == "rem" ~ "REM",
-#         sleep_stage == "light" ~ "Light",
-#         sleep_stage == "deep" ~ "Deep",
-#         sleep_stage == "asleep" ~ "Asleep"
-#       )
-#     )
-#   
-#   if (nrow(hypnogram_data_shiny) == 0) {
-#     return(create_empty_plot(paste("No sleep stage data for", target_date_shiny)))
-#   }
-#   
-#   # Get selected session label for subtitle
-#   selected_label <- sleep_sessions_shiny %>%
-#     filter(logId == selected_session) %>%
-#     pull(session_label)
-#   
-#   # Create plotly chart using clr
-#   plot_ly() %>%
-#     add_lines(
-#       data = hypnogram_data_shiny,
-#       x = ~time_num,
-#       y = ~stage_numeric,
-#       line = list(color = clr$text_primary, width = 2),
-#       name = "Sleep Stage",
-#       showlegend = FALSE,
-#       hoverinfo = "skip"
-#     ) %>%
-#     add_markers(
-#       data = hypnogram_data_shiny,
-#       x = ~time_num,
-#       y = ~stage_numeric,
-#       color = ~stage_label,
-#       colors = c(
-#         "Wake" = clr$wake,
-#         "REM" = clr$rem,
-#         "Light" = clr$light,
-#         "Deep" = clr$deep,
-#         "Asleep" = clr$text_secondary
-#       ),
-#       marker = list(size = 10, opacity = 0.7),
-#       text = ~paste(
-#         "Time:", sprintf("%02d:%02d", floor(time_num), round((time_num - floor(time_num)) * 60)),
-#         "<br>Stage:", stage_label
-#       ),
-#       hoverinfo = "text",
-#       showlegend = TRUE
-#     ) %>%
-#     layout(
-#       title = list(
-#         text = paste("Sleep Hypnogram -", format(target_date_shiny, "%B %d, %Y"),
-#                      "<br><sup>Session:", selected_label, "</sup>"),
-#         x = 0.5,
-#         xanchor = "center",
-#         font = list(size = 16, family = "Arial", color = clr$text_primary)
-#       ),
-#       xaxis = list(
-#         title = "Time",
-#         tickmode = "array",
-#         tickvals = seq(0, 24, 2),
-#         ticktext = c("12 AM", "2 AM", "4 AM", "6 AM", "8 AM", "10 AM", 
-#                      "12 PM", "2 PM", "4 PM", "6 PM", "8 PM", "10 PM", "12 AM"),
-#         range = c(0, 24),
-#         gridcolor = clr$target_line,
-#         gridwidth = 0.5,
-#         zeroline = FALSE,
-#         showline = TRUE,
-#         linecolor = "gray",
-#         linewidth = 1
-#       ),
-#       yaxis = list(
-#         title = "Sleep Stage",
-#         tickmode = "array",
-#         tickvals = c(4, 3, 2, 1),
-#         ticktext = c("Wake", "REM", "Light", "Deep"),
-#         range = c(0.5, 4.5),
-#         autorange = FALSE,
-#         gridcolor = clr$target_line,
-#         gridwidth = 0.5,
-#         zeroline = FALSE,
-#         showline = TRUE,
-#         linecolor = "gray",
-#         linewidth = 1
-#       ),
-#       legend = list(
-#         orientation = "h",
-#         yanchor = "bottom",
-#         y = -0.3,
-#         xanchor = "center",
-#         x = 0.5,
-#         title = list(text = "Stage"),
-#         font = list(size = 11, color = clr$text_primary)
-#       ),
-#       hoverlabel = list(
-#         bgcolor = clr$bg,
-#         font = list(color = clr$text_primary)
-#       ),
-#       margin = list(
-#         l = 60,
-#         r = 40,
-#         t = 80,
-#         b = 80
-#       ),
-#       plot_bgcolor = clr$bg,
-#       paper_bgcolor = clr$bg
-#     ) %>%
-#     config(displayModeBar = TRUE)
-# })
 ```
 
 
@@ -1672,74 +1148,6 @@ if (exists("sleep_data") && !is.null(sleep_data) && nrow(sleep_data) > 0) {
 } else {
   create_empty_plot("No sleep data available")
 }
-
-# ===== FOR APP.R: Add to UI =====
-# Check previous chart ^ for fullscreen code
-# ===== FOR APP.R: Wrap in renderPlotly =====
-# output$sleep_efficiency_chart <- renderPlotly({
-#   req(sleep_data())
-#
-#   sleep_efficiency <- sleep_data() %>%
-#     group_by(dateOfSleep, logId) %>%
-#     summarise(
-#       asleep_minutes = sum(sleep_stage != "wake"),
-#       total_minutes = n(),
-#       .groups = "drop"
-#     ) %>%
-#     group_by(dateOfSleep) %>%
-#     summarise(
-#       asleep_minutes = sum(asleep_minutes),
-#       total_minutes = sum(total_minutes),
-#       efficiency = round(asleep_minutes / total_minutes * 100, 1),
-#       .groups = "drop"
-#     ) %>%
-#     mutate(dateOfSleep = as.Date(dateOfSleep))
-#
-#   if (nrow(sleep_efficiency) == 0) {
-#     return(create_empty_plot("No sleep data available for selected filters"))
-#   }
-#
-#   plot_ly() %>%
-#     add_trace(
-#       data = sleep_efficiency,
-#       x = ~dateOfSleep,
-#       y = ~efficiency,
-#       type = "scatter",
-#       mode = "lines+markers",
-#       line = list(color = clr$blue, width = 2),
-#       marker = list(color = clr$blue, size = 8),
-#       name = "Efficiency",
-#       hoverinfo = "x+y",
-#       hovertemplate = paste(
-#         "<b>%{x}</b><br>",
-#         "Efficiency: %{y}%<br>",
-#         "<extra></extra>"
-#       )
-#     ) %>%
-#     add_trace(
-#       x = ~range(sleep_efficiency$dateOfSleep),
-#       y = c(85, 85),
-#       type = "scatter",
-#       mode = "lines",
-#       line = list(color = clr$target_line, dash = "dash", width = 2),
-#       name = "Target (85%)",
-#       hoverinfo = "skip"
-#     ) %>%
-#     layout(
-#       title = list(text = "Sleep Efficiency", x = 0.5),
-#       xaxis = list(title = "", tickformat = "%b %d"),
-#       yaxis = list(title = "Efficiency (%)", range = c(60, 100)),
-#       margin = list(l = 50, r = 20, t = 50, b = 60),
-#       hoverlabel = list(bgcolor = clr$bg),
-#       legend = list(
-#         orientation = "h",
-#         yanchor = "top",
-#         y = -0.15,
-#         xanchor = "center",
-#         x = 0.5
-#       )
-#     )
-# })
 ```
 
 ### 31. Sleep Latency
@@ -1898,6 +1306,16 @@ if (exists("sleep_data") && !is.null(sleep_data) && nrow(sleep_data) > 0) {
           xanchor = "right",
           font = list(color = "#F1C40F", size = 10)
         )
+      )
+    ) %>%
+    # HIGH-RESOLUTION OVERRIDE CONFIGURATION
+    config(
+      toImageButtonOptions = list(
+        format = "png",
+        filename = "sleep_latency_high_res",
+        width = 900,
+        height = 600,
+        scale = 3 # 3x multiplier creates a crisp, dense image file
       )
     )
   
@@ -2909,42 +2327,46 @@ if (exists("sleep_data") && exists("hrv_data") &&
 ### HRV vs Sleep Min
 
 ```{r, echo=FALSE, warning=FALSE, message=FALSE}
-# ===== CHART 7: HRV vs SLEEP MINUTES - SCATTER WITH REGRESSION =====
-# This is a simpler version focusing on the same-day relationship
-
-if (exists("hrv_sleep_data") && nrow(hrv_sleep_data) > 0) {
+# ===== CHART 7: HRV vs SLEEP MINUTES - SCATTER WITH REGRESSION ===== # 
+# This is a simpler version focusing on the same-day relationship 
+if (exists("hrv_sleep_data") && nrow(hrv_sleep_data) > 0) { 
   
-  # Calculate correlation
-  cor_value <- cor(hrv_sleep_data$total_sleep_minutes, 
-                   hrv_sleep_data$hrv_avg, 
-                   use = "complete.obs")
+  # Calculate correlation 
+  cor_value <- cor(hrv_sleep_data$total_sleep_minutes, hrv_sleep_data$hrv_avg, use = "complete.obs") 
   
-  # Create ggplot with regression line
-  p <- ggplot(hrv_sleep_data, aes(x = total_sleep_minutes, y = hrv_avg)) +
-    geom_point(color = clr$hr, size = 3, alpha = 0.7) +
-    geom_smooth(method = "lm", se = TRUE, color = clr$blue, 
-                fill = clr$hr, alpha = 0.2) +
-    labs(
-      x = "Total Sleep Minutes",
-      y = "Average HRV (RMSSD ms)"
-    ) +
-    annotate("text", 
-             x = max(hrv_sleep_data$total_sleep_minutes) * 0.75,
-             y = max(hrv_sleep_data$hrv_avg) * 0.95,
-             label = paste("r =", round(cor_value, 2)),
-             size = 4,
-             color = clr$text_secondary) +
-    dash_theme()
+  # Create ggplot with regression line 
+  p <- ggplot(hrv_sleep_data, aes(x = total_sleep_minutes, y = hrv_avg)) + 
+    geom_point(color = clr$hr, size = 3, alpha = 0.7) + 
+    geom_smooth(method = "lm", se = TRUE, color = clr$blue, fill = clr$hr, alpha = 0.2) + 
+    labs( 
+      x = "Total Sleep Minutes", 
+      y = "Average HRV (RMSSD ms)" 
+    ) + 
+    annotate("text", x = max(hrv_sleep_data$total_sleep_minutes) * 0.75, 
+             y = max(hrv_sleep_data$hrv_avg) * 0.95, 
+             label = paste("r =", round(cor_value, 2)), size = 4, color = clr$text_secondary) + 
+    dash_theme() 
   
-  ggplotly(p, tooltip = c("x", "y")) %>%
-    layout(
-      title = list(text = "HRV vs Sleep Minutes", x = 0.5),
-      hoverlabel = list(bgcolor = clr$bg),
-      margin = list(l = 50, r = 20, t = 50, b = 40)
-    )
+  # Convert to plotly and apply high-res configurations
+  ggplotly(p, tooltip = c("x", "y")) %>% 
+    layout( 
+      title = list(text = "HRV vs Sleep Minutes", x = 0.5), 
+      hoverlabel = list(bgcolor = clr$bg), 
+      margin = list(l = 50, r = 20, t = 50, b = 40) 
+    ) %>%
+    # HIGH-RESOLUTION OVERRIDE CONFIGURATION
+    config(
+      toImageButtonOptions = list(
+        format = "png",
+        filename = "hrv_vs_sleep_high_res",
+        width = 800,
+        height = 600,
+        scale = 3 # 3x scale multiplier for publication-quality clarity
+      )
+    ) 
   
-} else {
-  create_empty_plot("No data available for HRV vs Sleep correlation")
+} else { 
+  create_empty_plot("No data available for HRV vs Sleep correlation") 
 }
 ```
 

@@ -11,6 +11,8 @@ clr <- list(
   light    = "#56B4E9",  # lightblue
   rem      = "#CC79A7",  # purple
   wake     = "#E69F00",  # orange
+  asleep   = "#4B5563", 
+  full_sleep = "#9CA3AF",
   calories = "#F5C710",  # yellow
   spo2     = "#009E73",  # green
   bg       = "#FFFFFF",  # white

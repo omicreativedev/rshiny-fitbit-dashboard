@@ -14,6 +14,7 @@
 
 # Load required libraries
 library(bslib)           # popover() and tooltip()
+library(bsicons)         # 
 library(shinyWidgets)    # dropdownButton(), panel(), etc.
 library(shinyBS)         # bsCollapse(), bsCollapsePanel()
 library(shiny)           # Web application framework
@@ -27,6 +28,51 @@ library(zoo)             # For rolling averages (HRV)
 
 # Source external colour palette (used across all charts)
 source("R/colours.R")
+# Souce extenal chart card wrappers
+source("R/chart_card.R")
+
+# ============================================================================
+# TAB & CHART PERMISSIONS
+# ============================================================================
+# Edit these constants to control which tabs/charts are visible to whom.
+#
+# IMPORTANT: Adding or renaming a tab here is NOT enough on its own.
+# Every tab listed in ALL_USER_TABS or ADMIN_ONLY_TABS must also have a
+# matching entry in `tab_registry`, inside output$dynamic_tabs (server
+# section, search for "PERMISSION-WIRED"). The name used here and the
+# name used as the key in tab_registry must match EXACTLY (case-sensitive).
+# If they don't match, the tab will silently fail to render (a warning
+# will print to the console, but the app will not crash).
+#
+# Chart-level visibility (ADMIN_ONLY_CHARTS) does not require a separate
+# registry — it is checked directly against each chart's output ID
+# wherever that chart is rendered. See "ADMIN-ONLY" comments throughout
+# the tab content functions for exact wiring locations.
+
+# Tabs visible to ALL logged-in users (including admins)
+ALL_USER_TABS <- c(
+  "Overview",
+  "Heart Rate",
+  "Sleep",
+  "Activity",
+  "Insights",
+  "Projections"
+)
+
+# Tabs visible ONLY to admins
+ADMIN_ONLY_TABS <- c(
+  "Analysis",
+  "Data View"
+)
+
+# Chart IDs visible ONLY to admins, regardless of which tab they live in.
+# A chart's output ID only needs to be listed here if it lives inside an
+# ALL_USER_TABS tab — charts inside ADMIN_ONLY_TABS tabs are already
+# hidden by the tab-level lockout, so listing them here is redundant
+# (but harmless, in case a chart later moves to a shared tab).
+ADMIN_ONLY_CHARTS <- c(
+  "hrv_chart"
+)
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -67,11 +113,16 @@ sanitize_column_names <- function(df) {
   df
 }
 
-#' Add study_day column to a dataframe, handling different date column names
+#' Add study_day, day_of_week, and day_type columns to a dataframe
+#' 
+#' Handles different date column names (date vs dateOfSleep). Requires
+#' system locale to be English, since day_of_week and day_type are derived
+#' from base R's weekdays(), which is locale-dependent.
 #' 
 #' @param df Dataframe with date or dateOfSleep column and participantID
 #' @param token Token sheet dataframe with participant start dates
-#' @return Dataframe with added study_day and day_of_week columns
+#' @return Dataframe with added study_day, day_of_week, and day_type columns.
+#'   day_type is "Weekday" or "Weekend", derived from day_of_week.
 add_study_day <- function(df, token) {
   # Check if we have participantID and a date column
   if (!"participantID" %in% names(df)) return(df)
@@ -98,14 +149,20 @@ add_study_day <- function(df, token) {
     left_join(token %>% select(participantID, start_date), by = "participantID") %>%
     mutate(
       study_day = as.integer(as.Date(!!sym(date_col)) - as.Date(start_date)) + 1,
-      day_of_week = weekdays(as.Date(!!sym(date_col)))
+      day_of_week = weekdays(as.Date(!!sym(date_col))),
+      # --- A4: weekday/weekend classification, used by future weekday-vs-weekend charts ---
+      day_type = ifelse(day_of_week %in% c("Saturday", "Sunday"), "Weekend", "Weekday")
     ) %>%
     select(-start_date)
 }
 
-#' Load all CSV files from the csvdata folder and add study_day column
+#' Load all CSV files from the csvdata folder and add study_day,
+#' day_of_week, and day_type columns
 #' 
-#' @return List of dataframes with study_day added to all applicable tables
+#' @return List of dataframes, with study_day, day_of_week, and day_type
+#'   added to every table that has a participantID column and a date
+#'   column (either date or dateOfSleep). Tables without both are
+#'   returned unchanged. See add_study_day() for column details.
 load_all_data <- function() {
   # Get all CSV files from the csvdata folder
   csv_files <- list.files("csvdata", pattern = "\\.csv$", full.names = TRUE)
@@ -214,12 +271,12 @@ add_datetime_from_timestamp <- function(df, timestamp_col = "timestamp") {
 dash_theme <- function() {
   theme_minimal() +
     theme(
-      panel.grid.major = element_line(color = "#F3F4F6"),
+      panel.grid.major = element_line(color = clr$grid_line),
       panel.grid.minor = element_blank(),
-      axis.text = element_text(size = 10, color = "#6B7280"),
-      axis.title = element_text(size = 11, color = "#6B7280"),
+      axis.text = element_text(size = 10, color = clr$text_secondary),
+      axis.title = element_text(size = 11, color = clr$text_secondary),
       legend.position = "bottom",
-      legend.text = element_text(size = 10, color = "#6B7280"),
+      legend.text = element_text(size = 10, color = clr$text_secondary),
       legend.title = element_blank()
     )
 }
@@ -231,20 +288,28 @@ dash_theme <- function() {
 create_empty_plot <- function(message) {
   p <- ggplot() + 
     annotate("text", x = 0.5, y = 0.5, label = message, 
-             size = 5, color = "#6B7280") +
+             size = 5, color = clr$text_secondary) +
     theme_void() +
     theme(plot.background = element_rect(fill = "transparent", color = NA))
   ggplotly(p) %>%
-    layout(hoverlabel = list(bgcolor = "white"),
+    layout(hoverlabel = list(bgcolor = clr$bg),
            margin = list(l = 20, r = 20, t = 20, b = 20))
 }
 
 # ============================================================================
 # USER INTERFACE (UI)
 # ============================================================================
-
+# Popover colors need to be hardcoded by cause popover cannot reach
+# into the custom.css file
 ui <- fluidPage(
   title = "Simmons University | FitBit Research Dashboard",
+  theme = bslib::bs_theme(version = 5) |>
+    bslib::bs_add_rules("
+    .popover-header {
+      background-color: #8da3c0;
+      color: #ffffff;
+    }
+  "),
   useShinyjs(),
   
   tags$head(
@@ -296,7 +361,7 @@ ui <- fluidPage(
           
           # Admin participant selector (hidden for non-admins)
           div(id = "admin_selector_container", class = "admin-selector", style = "display: none;",
-              selectInput("admin_participant", "View Participant:",
+              selectInput("admin_participant", NULL,
                           choices = c("All Participants" = "ALL"),
                           width = "220px"))
       ),
@@ -324,6 +389,89 @@ server <- function(input, output, session) {
     selected_participant = NULL
   )
   
+  # Tracks collapsed/expanded state per chart_id for this session.
+  # TRUE = collapsed, FALSE = open. Populated lazily — a chart_id only
+  # gets an entry here once init_chart_card(chart_id, is_admin) has run
+  # for it at least once (see helper function below).
+  chart_state <- reactiveValues()
+  
+  # ==================== CHART CARD INITIALIZATION ====================
+  # Call this once per chart_id, anywhere in server, to wire up that
+  # chart's collapse/expand toggle. This is the only server-side setup
+  # required per chart — chart_card_ui() in the UI side handles the rest.
+  #
+  # is_admin here only matters the FIRST time this chart_id is seen in
+  # this session (it seeds the starting collapsed/open state). After
+  # that, chart_state persists for the session regardless of is_admin.
+  #
+  # SAFE TO CALL MULTIPLE TIMES: tab content functions (e.g.
+  # heart_rate_tab_content()) can re-run whenever dynamic_tabs re-renders
+  # (e.g. login state changes). chart_observers_registered guards against
+  # duplicate observeEvent registration, so calling this again for the
+  # same chart_id is a safe no-op for the observer/seed parts.
+  chart_observers_registered <- reactiveValues()
+  
+  init_chart_card <- function(chart_id, is_admin) {
+    
+    toggle_ui_id    <- paste0(chart_id, "_toggle_ui")
+    toggle_click_id <- paste0(chart_id, "_toggle_click")
+    body_id         <- paste0(chart_id, "_body")
+    
+    # Seed initial state once. isolate() prevents this from creating a
+    # reactive dependency on chart_state itself (which would cause this
+    # whole function to needlessly re-run every time ANY chart's state
+    # changes, not just this one).
+    if (is.null(isolate(chart_state[[chart_id]]))) {
+      starts_collapsed <- isTRUE(is_admin)
+      chart_state[[chart_id]] <- starts_collapsed  # TRUE = start collapsed
+      
+      if (starts_collapsed) {
+        shinyjs::delay(100, shinyjs::hide(body_id))
+      } else {
+        shinyjs::delay(100, shinyjs::show(body_id))
+      }
+    }
+    
+    # Render the toggle icon + its clickable link. Re-runs automatically
+    # whenever chart_state[[chart_id]] changes (via the click observer
+    # below, or any future code that sets it).
+    output[[toggle_ui_id]] <- renderUI({
+      collapsed <- isTRUE(chart_state[[chart_id]])
+      
+      icon_name  <- if (collapsed) "eye-slash-fill" else "eye"
+      icon_class <- if (collapsed) "chart-toggle-collapsed" else "chart-toggle-open"
+      
+      actionLink(
+        inputId = toggle_click_id,
+        label = bsicons::bs_icon(icon_name),
+        class = paste("chart-toggle-trigger", icon_class)
+      )
+    })
+    
+    # Guard: only register the click observer once per chart_id per
+    # session, even if init_chart_card() is called again later (e.g. tab
+    # content function re-runs on login state change). Without this guard,
+    # repeated calls would stack duplicate observers on the same input,
+    # causing a single click to fire the toggle logic multiple times.
+    if (isTRUE(isolate(chart_observers_registered[[chart_id]]))) {
+      return(invisible(NULL))
+    }
+    chart_observers_registered[[chart_id]] <- TRUE
+    
+    # Click handler: flips this chart's state and shows/hides its body.
+    # ignoreInit = TRUE so this doesn't fire on app load, only on actual clicks.
+    observeEvent(input[[toggle_click_id]], {
+      new_collapsed <- !isTRUE(chart_state[[chart_id]])
+      chart_state[[chart_id]] <- new_collapsed
+      
+      if (new_collapsed) {
+        shinyjs::hide(body_id)
+      } else {
+        shinyjs::show(body_id)
+      }
+    }, ignoreInit = TRUE)
+  }
+  
   # ==================== LOGIN UI (swaps form ↔ logout button) ====================
   
   output$login_ui <- renderUI({
@@ -348,6 +496,13 @@ server <- function(input, output, session) {
     auth$participant_id    <- NULL
     auth$is_admin          <- FALSE
     auth$selected_participant <- NULL
+    
+    # Reset chart collapse state so the next login (possibly a different
+    # user with a different is_admin) gets a fresh seed instead of
+    # inheriting collapse states from this session.
+    for (chart_id in names(chart_state)) {
+      chart_state[[chart_id]] <- NULL
+    }
     
     shinyjs::hide("main_app")
     shinyjs::hide("admin_selector_container")
@@ -771,41 +926,62 @@ server <- function(input, output, session) {
   })
   
   # ==================== DYNAMIC TABS ====================
+  # --- PERMISSION-WIRED: tab visibility is driven by 
+  # ALL_USER_TABS / ADMIN_ONLY_TABS, see top of file ---
   
-  # Render tabs dynamically based on user role
-  # Admins see additional tabs (Analysis, Data View)
   output$dynamic_tabs <- renderUI({
     req(auth$logged_in)
-    if (auth$is_admin) {
-      tabsetPanel(
-        tabPanel("Overview", overview_tab_content()),
-        tabPanel("Heart Rate", heart_rate_tab_content()),
-        tabPanel("Sleep", sleep_tab_content()),
-        tabPanel("Activity", activity_tab_content()),
-        tabPanel("Insights", insights_tab_content()),
-        tabPanel("Projections", projections_tab_content()),
-        tabPanel("Analysis", analysis_tab_content()),
-        tabPanel("Data View", data_view_tab_content())
-      )
+    
+    # Map of tab name -> content function.
+    # Every tab must be registered here.
+    tab_registry <- list(
+      "Overview"    = overview_tab_content,
+      "Heart Rate"  = heart_rate_tab_content,
+      "Sleep"       = sleep_tab_content,
+      "Activity"    = activity_tab_content,
+      "Insights"    = insights_tab_content,
+      "Projections" = projections_tab_content,
+      "Analysis"    = analysis_tab_content,
+      "Data View"   = data_view_tab_content
+    )
+    
+    # Determine which tab names this user is allowed to see
+    visible_tab_names <- if (auth$is_admin) {
+      c(ALL_USER_TABS, ADMIN_ONLY_TABS)
     } else {
-      tabsetPanel(
-        tabPanel("Overview", overview_tab_content()),
-        tabPanel("Heart Rate", heart_rate_tab_content()),
-        tabPanel("Sleep", sleep_tab_content()),
-        tabPanel("Activity", activity_tab_content()),
-        tabPanel("Insights", insights_tab_content()),
-        tabPanel("Projections", projections_tab_content())
-      )
+      ALL_USER_TABS
     }
+    
+    # Build tabPanel() calls only for visible tabs,
+    # preserving the order
+    # given in ALL_USER_TABS / ADMIN_ONLY_TABS
+    tab_panels <- lapply(visible_tab_names, function(tab_name) {
+      content_fn <- tab_registry[[tab_name]]
+      if (is.null(content_fn)) {
+        warning(paste0("Tab '", tab_name, "' is listed in ALL_USER_TABS or ",
+                       "ADMIN_ONLY_TABS but has no entry in tab_registry. Skipping."))
+        return(NULL)
+      }
+      tabPanel(tab_name, content_fn(is_admin = auth$is_admin))
+    })
+    
+    # Drop any NULLs from unmatched tabs
+    # before passing to tabsetPanel
+    tab_panels <- Filter(Negate(is.null), tab_panels)
+    
+    do.call(tabsetPanel, tab_panels)
   })
   
   # ==================== TAB CONTENT FUNCTIONS ====================
   # Each function returns UI content for its respective tab
   
-  overview_tab_content <- function() {
+  overview_tab_content <- function(is_admin) {
+    init_chart_card("plot_hr", is_admin)
+    init_chart_card("plot_steps", is_admin)
+    init_chart_card("plot_sleep", is_admin)
+    
     tagList(
       br(),
-      # Metric cards row
       fluidRow(
         column(3, div(class = "metric-card",
                       p("AVG HEART RATE", class = "metric-label"),
@@ -825,32 +1001,51 @@ server <- function(input, output, session) {
                       p("%", class = "metric-unit")))
       ),
       br(),
-      # Chart row 1: Heart Rate + Steps
       fluidRow(
-        column(6, div(class = "chart-card",
-                      p("Heart Rate Over Time", class = "chart-title"),
-                      plotlyOutput("plot_hr", height = "280px"))),
-        column(6, div(class = "chart-card",
-                      p("Daily Steps", class = "chart-title"),
-                      plotlyOutput("plot_steps", height = "280px")))
+        column(6, chart_card_ui(
+          chart_id  = "plot_hr",
+          title     = "Heart Rate Over Time",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "280px"
+        )),
+        column(6, chart_card_ui(
+          chart_id  = "plot_steps",
+          title     = "Daily Steps",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "280px"
+        ))
       ),
-      # Chart row 2: Sleep
       fluidRow(
-        column(12, div(class = "chart-card",
-                       p("Sleep Stage Breakdown", class = "chart-title"),
-                       plotlyOutput("plot_sleep", height = "280px")))
+        column(12, chart_card_ui(
+          chart_id  = "plot_sleep",
+          title     = "Sleep Stage Breakdown",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "280px"
+        ))
       )
     )
   }
   
-  heart_rate_tab_content <- function() {
+  # ================= Heart Rate Tab =================
+  
+  heart_rate_tab_content <- function(is_admin) {
+    init_chart_card("hr_timeseries", is_admin)
     tagList(
       br(),
+      # Heart Rate Time Series Chart -----------------
       fluidRow(
-        column(12, div(class = "chart-card",
-                       p("Heart Rate Time Series", class = "chart-title"),
-                       plotlyOutput("hr_timeseries", height = "400px")))
+        column(12, chart_card_ui(
+          chart_id  = "hr_timeseries",
+          title     = "Heart Rate Time Series",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "400px"
+        ))
       ),
+      # ---------------------------------------------
       fluidRow(
         column(6, div(class = "chart-card",
                       p("Heart Rate Distribution", class = "chart-title"),
@@ -859,15 +1054,21 @@ server <- function(input, output, session) {
                       p("Heart Rate by Hour of Day", class = "chart-title"),
                       plotlyOutput("hr_by_hour", height = "300px")))
       ),
-      fluidRow(
-        column(12, div(class = "chart-card",
-                       p("Heart Rate Variability (HRV)", class = "chart-title"),
-                       plotlyOutput("hrv_chart", height = "300px")))
-      )
+      # --- ADMIN-ONLY: this chart is gated by ADMIN_ONLY_CHARTS, see top of file ---
+      if (is_admin || !("hrv_chart" %in% ADMIN_ONLY_CHARTS)) {
+        fluidRow(
+          column(12, div(class = "chart-card",
+                         p("Heart Rate Variability (HRV)", class = "chart-title"),
+                         plotlyOutput("hrv_chart", height = "300px")))
+        )
+      }
+      # --- END ADMIN-ONLY ---
     )
   }
   
-  sleep_tab_content <- function() {
+  # ================= SLEEP Tab =================
+  
+  sleep_tab_content <- function(is_admin) {
     tagList(
       br(),
       fluidRow(
@@ -897,7 +1098,7 @@ server <- function(input, output, session) {
     )
   }
   
-  activity_tab_content <- function() {
+  activity_tab_content <- function(is_admin) {
     tagList(
       br(),
       fluidRow(
@@ -929,7 +1130,7 @@ server <- function(input, output, session) {
     )
   }
   
-  insights_tab_content <- function() {
+  insights_tab_content <- function(is_admin) {
     tagList(
       br(),
       fluidRow(
@@ -946,7 +1147,7 @@ server <- function(input, output, session) {
     )
   }
   
-  projections_tab_content <- function() {
+  projections_tab_content <- function(is_admin) {
     tagList(
       br(),
       fluidRow(
@@ -957,7 +1158,7 @@ server <- function(input, output, session) {
     )
   }
   
-  analysis_tab_content <- function() {
+  analysis_tab_content <- function(is_admin) {
     tagList(
       br(),
       fluidRow(
@@ -983,7 +1184,7 @@ server <- function(input, output, session) {
     )
   }
   
-  data_view_tab_content <- function() {
+  data_view_tab_content <- function(is_admin) {
     tagList(
       br(),
       fluidRow(
@@ -1055,7 +1256,7 @@ server <- function(input, output, session) {
       p <- ggplot(daily_steps, aes(x = study_day, y = total)) +
         geom_col(fill = clr$steps, width = 0.7, alpha = 0.9) +
         geom_hline(yintercept = 10000, linetype = "dashed", 
-                   color = "#9CA3AF", linewidth = 0.5) +
+                   color = clr$target_line, linewidth = 0.5) +
         scale_y_continuous(labels = scales::comma) +
         labs(x = "Study Day", y = "steps") +
         dash_theme()
@@ -1073,7 +1274,7 @@ server <- function(input, output, session) {
       p <- ggplot(daily_steps, aes(x = date, y = total)) +
         geom_col(fill = clr$steps, width = 0.7, alpha = 0.9) +
         geom_hline(yintercept = 10000, linetype = "dashed", 
-                   color = "#9CA3AF", linewidth = 0.5) +
+                   color = clr$target_line, linewidth = 0.5) +
         scale_y_continuous(labels = scales::comma) +
         scale_x_date(date_labels = "%b %d") +
         labs(x = NULL, y = "steps") +
@@ -1081,7 +1282,7 @@ server <- function(input, output, session) {
     }
     
     ggplotly(p) %>% 
-      layout(hoverlabel = list(bgcolor = "white"),
+      layout(hoverlabel = list(bgcolor = clr$bg),
              margin = list(l = 50, r = 20, t = 20, b = 40))
   })
   
@@ -1164,7 +1365,7 @@ server <- function(input, output, session) {
     }
     
     ggplotly(p) %>% 
-      layout(hoverlabel = list(bgcolor = "white"),
+      layout(hoverlabel = list(bgcolor = clr$bg),
              margin = list(l = 50, r = 20, t = 50, b = 40))
   })
   
@@ -1217,7 +1418,7 @@ server <- function(input, output, session) {
     ggplotly(p, tooltip = c("x", "y")) %>%
       layout(
         xaxis = list(tickangle = -45),
-        hoverlabel = list(bgcolor = "white", font = list(size = 10)),
+        hoverlabel = list(bgcolor = clr$bg, font = list(size = 10)),
         margin = list(l = 50, r = 20, t = 20, b = 60)
       )
   })
@@ -1233,19 +1434,19 @@ server <- function(input, output, session) {
     
     if (input$view_mode == "day") {
       p <- ggplot(df, aes(x = heart_rate_avg, fill = factor(study_day))) +
-        geom_histogram(alpha = 0.7, bins = 25, color = "white", linewidth = 0.2) +
+        geom_histogram(alpha = 0.7, bins = 25, color = clr$bg, linewidth = 0.2) +
         labs(x = "bpm", y = "count", fill = "Study Day") +
         dash_theme()
     } else {
       p <- ggplot(df, aes(x = heart_rate_avg)) +
         geom_histogram(fill = clr$hr, alpha = 0.85, bins = 25,
-                       color = "white", linewidth = 0.2) +
+                       color = clr$bg, linewidth = 0.2) +
         labs(x = "bpm", y = "count") +
         dash_theme()
     }
     
     ggplotly(p) %>%
-      layout(hoverlabel = list(bgcolor = "white"),
+      layout(hoverlabel = list(bgcolor = clr$bg),
              margin = list(l = 50, r = 20, t = 20, b = 40))
   })
   #------------------end HR distribution
@@ -1290,7 +1491,7 @@ server <- function(input, output, session) {
         geom_col(fill = clr$hr, width = 0.7, alpha = 0.8) +
         geom_errorbar(aes(ymin = avg_heart_rate - sd_heart_rate,
                           ymax = avg_heart_rate + sd_heart_rate),
-                      width = 0.3, color = "#6B7280", linewidth = 0.4) +
+                      width = 0.3, color = clr$error_bar, linewidth = 0.4) +
         labs(x = "Hour of Day", y = "Average Heart Rate (bpm)") +
         scale_x_continuous(breaks = seq(0, 23, by = 2),
                            labels = sprintf("%02d:00", seq(0, 23, by = 2))) +
@@ -1300,7 +1501,7 @@ server <- function(input, output, session) {
     }
     
     ggplotly(p, tooltip = c("x", "y")) %>%
-      layout(hoverlabel = list(bgcolor = "white"),
+      layout(hoverlabel = list(bgcolor = clr$bg),
              margin = list(l = 50, r = 20, t = 20, b = 60))
   })
   #------------------------- end by hour
@@ -1338,7 +1539,7 @@ server <- function(input, output, session) {
     }
     
     ggplotly(p) %>%
-      layout(hoverlabel = list(bgcolor = "white"),
+      layout(hoverlabel = list(bgcolor = clr$bg),
              margin = list(l = 50, r = 20, t = 20, b = 40))
   })
   # end hrv
@@ -1386,7 +1587,7 @@ server <- function(input, output, session) {
     }
     
     ggplotly(p) %>%
-      layout(hoverlabel = list(bgcolor = "white"),
+      layout(hoverlabel = list(bgcolor = clr$bg),
              margin = list(l = 50, r = 20, t = 20, b = 40))
   })
   
@@ -1451,7 +1652,7 @@ server <- function(input, output, session) {
         geom_line(linewidth = 0.8) +
         geom_point(size = 2) +
         scale_color_manual(values = c(
-          "Full Sleep" = "#6B7280", Deep = clr$deep,
+          "Full Sleep" = clr$full_sleep, Deep = clr$deep,
           Light = clr$light, REM = clr$rem)) +
         scale_x_continuous(breaks = scales::pretty_breaks()) +
         scale_y_continuous(breaks = scales::pretty_breaks()) +
@@ -1474,7 +1675,7 @@ server <- function(input, output, session) {
         geom_line(linewidth = 0.8) +
         geom_point(size = 2) +
         scale_color_manual(values = c(
-          "Full Sleep" = "#6B7280", Deep = clr$deep,
+          "Full Sleep" = clr$full_sleep, Deep = clr$deep,
           Light = clr$light, REM = clr$rem)) +
         scale_x_date(date_labels = "%b %d") +
         scale_y_continuous(breaks = scales::pretty_breaks()) +
@@ -1483,7 +1684,7 @@ server <- function(input, output, session) {
     }
     
     ggplotly(p) %>%
-      layout(hoverlabel = list(bgcolor = "white"),
+      layout(hoverlabel = list(bgcolor = clr$bg),
              margin = list(l = 50, r = 20, t = 20, b = 40))
   })
   
@@ -1532,12 +1733,12 @@ server <- function(input, output, session) {
     
     plot_ly() %>%
       add_lines(data = hypnogram_data, x = ~time_num, y = ~stage_numeric,
-                line = list(color = "#1A1A2E", width = 2),
+                line = list(color = clr$text_primary, width = 2),
                 showlegend = FALSE, hoverinfo = "skip") %>%
       add_markers(data = hypnogram_data, x = ~time_num, y = ~stage_numeric,
                   color = ~stage_label,
                   colors = c(Wake = clr$wake, REM = clr$rem, Light = clr$light,
-                             Deep = clr$deep, Asleep = "#6B7280"),
+                             Deep = clr$deep, Asleep = clr$asleep),
                   marker = list(size = 8, opacity = 0.7)) %>%
       layout(
         xaxis = list(title = "Time", tickmode = "array",
@@ -1572,14 +1773,14 @@ server <- function(input, output, session) {
       p <- ggplot(eff, aes(x = study_day, y = efficiency)) +
         geom_line(color = clr$steps, linewidth = 1) +
         geom_point(color = clr$steps, size = 3) +
-        geom_hline(yintercept = 85, linetype = "dashed", color = "#9CA3AF") +
+        geom_hline(yintercept = 85, linetype = "dashed", color = clr$target_line) +
         scale_x_continuous(breaks = scales::pretty_breaks()) +
         scale_y_continuous(breaks = scales::pretty_breaks()) +
         labs(x = "Study Day", y = "Efficiency (%)") +
         dash_theme()
       
       ggplotly(p) %>%
-        layout(hoverlabel = list(bgcolor = "white"),
+        layout(hoverlabel = list(bgcolor = clr$bg),
                margin = list(l = 50, r = 20, t = 20, b = 40))
     } else {
       eff <- df %>%
@@ -1602,7 +1803,7 @@ server <- function(input, output, session) {
                   name = "Efficiency") %>%
         add_trace(x = range(eff$dateOfSleep), y = c(85, 85),
                   type = "scatter", mode = "lines",
-                  line = list(color = "#9CA3AF", dash = "dash"),
+                  line = list(color = clr$target_line, dash = "dash"),
                   name = "Target (85%)") %>%
         layout(
           xaxis = list(title = "", tickformat = "%b %d"),
@@ -1646,7 +1847,7 @@ server <- function(input, output, session) {
           xaxis = list(title = "Study Day"),
           yaxis = list(title = "Minutes"),
           legend = list(orientation = "h", xanchor = "center", x = 0.5, yanchor = "top", y = -0.2),
-          hoverlabel = list(bgcolor = "white"),
+          hoverlabel = list(bgcolor = clr$bg),
           margin = list(l = 50, r = 20, t = 20, b = 60)
         )
     } else {
@@ -1677,7 +1878,7 @@ server <- function(input, output, session) {
           xaxis = list(title = "Date", tickformat = "%b %d"),
           yaxis = list(title = "Minutes"),
           legend = list(orientation = "h", xanchor = "center", x = 0.5, yanchor = "top", y = -0.2),
-          hoverlabel = list(bgcolor = "white"),
+          hoverlabel = list(bgcolor = clr$bg),
           margin = list(l = 50, r = 20, t = 20, b = 60)
         )
     }
@@ -1769,7 +1970,7 @@ server <- function(input, output, session) {
       dash_theme()
     
     ggplotly(p, tooltip = "text") %>%
-      layout(hoverlabel = list(bgcolor = "white"),
+      layout(hoverlabel = list(bgcolor = clr$bg),
              margin = list(l = 50, r = 20, t = 20, b = 40))
   })
   #------------------------end activity
@@ -1817,7 +2018,7 @@ server <- function(input, output, session) {
     }
     
     ggplotly(p) %>%
-      layout(hoverlabel = list(bgcolor = "white"),
+      layout(hoverlabel = list(bgcolor = clr$bg),
              margin = list(l = 50, r = 20, t = 20, b = 40))
   })
   #-------------------------------------------------------------
@@ -1865,7 +2066,7 @@ server <- function(input, output, session) {
     }
     
     ggplotly(p) %>%
-      layout(hoverlabel = list(bgcolor = "white"),
+      layout(hoverlabel = list(bgcolor = clr$bg),
              margin = list(l = 50, r = 20, t = 20, b = 40))
   })
   
@@ -1911,7 +2112,7 @@ server <- function(input, output, session) {
     }
     
     ggplotly(p) %>%
-      layout(hoverlabel = list(bgcolor = "white"),
+      layout(hoverlabel = list(bgcolor = clr$bg),
              margin = list(l = 50, r = 20, t = 20, b = 40))
   })
   
@@ -1952,7 +2153,7 @@ server <- function(input, output, session) {
     }
     
     ggplotly(p) %>%
-      layout(hoverlabel = list(bgcolor = "white"),
+      layout(hoverlabel = list(bgcolor = clr$bg),
              margin = list(l = 50, r = 20, t = 20, b = 40))
   })
   
@@ -2069,7 +2270,7 @@ server <- function(input, output, session) {
     }
     
     ggplotly(p, tooltip = c("x", "y", "colour")) %>%
-      layout(hoverlabel = list(bgcolor = "white"),
+      layout(hoverlabel = list(bgcolor = clr$bg),
              margin = list(l = 50, r = 20, t = 20, b = 40))
   })
   
@@ -2115,7 +2316,7 @@ server <- function(input, output, session) {
     }
     
     ggplotly(p, tooltip = c("x", "y", "fill")) %>%
-      layout(hoverlabel = list(bgcolor = "white"),
+      layout(hoverlabel = list(bgcolor = clr$bg),
              margin = list(l = 50, r = 20, t = 20, b = 40))
   })
   
