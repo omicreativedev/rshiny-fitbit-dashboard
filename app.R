@@ -326,7 +326,8 @@ ui <- fluidPage(
   # ==================== LOGIN SECTION ====================
   div(class = "login-section",
       uiOutput("login_ui"),
-      div(class = "user-info", textOutput("login_status"))
+      div(class = "user-info", textOutput("login_status")),
+      uiOutput("device_warning")
   ),
   
   # ==================== MAIN APP (hidden until Logged In) ====================
@@ -388,6 +389,15 @@ ui <- fluidPage(
 # ============================================================================
 
 server <- function(input, output, session) {
+  
+  output$device_warning <- renderUI({
+    if (!auth$logged_in) {
+      div(style = "font-size: 12px; color: #8da3c0; margin-top: 4px;",
+          bsicons::bs_icon("info-circle"), 
+          " This app only supports full screen mode on desktop or laptop computers.")
+    }
+  })
+  
   
   # ==================== REACTIVE VALUES ====================
   
@@ -1607,6 +1617,8 @@ server <- function(input, output, session) {
     }
     
     if (input$view_mode == "day") {
+      is_all <- auth$is_admin && is.null(current_participant())
+      
       chart_data <- df %>%
         group_by(study_day) %>%
         summarise(heart_rate_avg = mean(heart_rate_avg, na.rm = TRUE), .groups = "drop")
@@ -1614,9 +1626,9 @@ server <- function(input, output, session) {
       p <- ggplot(chart_data, aes(x = study_day, y = heart_rate_avg)) +
         geom_line(color = clr$hr, linewidth = 0.8, alpha = 0.9) +
         geom_point(color = clr$hr, size = 2.5, alpha = 0.9) +
-        labs(x = "Study Day", y = "Heart Rate (bpm)") +
+        labs(x = "Study Day", 
+             y = if (is_all) "Avg Heart Rate (bpm, all participants)" else "Heart Rate (bpm)") +
         scale_x_continuous(breaks = scales::pretty_breaks()) +
-        #scale_y_continuous(limits = c(55, 150), breaks = seq(40, 150, by = 20)) +
         scale_y_continuous(breaks = scales::pretty_breaks(n = 6)) +
         dash_theme()
       
@@ -1654,10 +1666,20 @@ server <- function(input, output, session) {
     }
     
     if (input$view_mode == "day") {
-      p <- ggplot(df, aes(x = heart_rate_avg, fill = factor(study_day))) +
-        geom_histogram(alpha = 0.7, bins = 25, color = clr$bg, linewidth = 0.2) +
-        labs(x = "bpm", y = "count", fill = "Study Day") +
-        dash_theme()
+      is_all <- auth$is_admin && is.null(current_participant())
+      
+      if (is_all) {
+        p <- ggplot(df, aes(x = heart_rate_avg, y = after_stat(density), 
+                            fill = participantID)) +
+          geom_histogram(alpha = 0.7, bins = 25, color = clr$bg, linewidth = 0.2) +
+          labs(x = "bpm", y = "density") +
+          dash_theme()
+      } else {
+        p <- ggplot(df, aes(x = heart_rate_avg, fill = factor(study_day))) +
+          geom_histogram(alpha = 0.7, bins = 25, color = clr$bg, linewidth = 0.2) +
+          labs(x = "bpm", y = "count", fill = "Study Day") +
+          dash_theme()
+      }
     } else {
       p <- ggplot(df, aes(x = heart_rate_avg)) +
         geom_histogram(fill = clr$hr, alpha = 0.85, bins = 25,
@@ -1668,7 +1690,9 @@ server <- function(input, output, session) {
     
     ggplotly(p) %>%
       layout(hoverlabel = list(bgcolor = clr$bg),
-             margin = list(l = 50, r = 20, t = 20, b = 40))
+             legend = list(orientation = "h", xanchor = "center",
+                           x = 0.5, y = -0.5, title = list(text = "")),
+             margin = list(l = 50, r = 20, t = 20, b = 80))
   })
   #------------------end HR distribution
   
@@ -1682,21 +1706,41 @@ server <- function(input, output, session) {
     }
     
     if (input$view_mode == "day") {
-      chart_data <- df %>%
-        filter(!is.na(datetime)) %>%
-        mutate(hour_of_day = hour(datetime)) %>%
-        group_by(study_day, hour_of_day) %>%
-        summarise(avg_heart_rate = mean(heart_rate_avg, na.rm = TRUE), .groups = "drop")
+      is_all <- auth$is_admin && is.null(current_participant())
       
-      p <- ggplot(chart_data, aes(x = hour_of_day, y = avg_heart_rate,
-                                  color = factor(study_day), group = factor(study_day))) +
-        geom_line(linewidth = 0.8, alpha = 0.8) +
-        geom_point(size = 1.5, alpha = 0.7) +
-        labs(x = "Hour of Day", y = "Average Heart Rate (bpm)", color = "Study Day") +
-        scale_x_continuous(breaks = seq(0, 23, by = 2),
-                           labels = sprintf("%02d:00", seq(0, 23, by = 2))) +
-        dash_theme() +
-        theme(axis.text.x = element_text(size = 8))
+      if (is_all) {
+        chart_data <- df %>%
+          filter(!is.na(datetime)) %>%
+          mutate(hour_of_day = hour(datetime)) %>%
+          group_by(participantID, hour_of_day) %>%
+          summarise(avg_heart_rate = mean(heart_rate_avg, na.rm = TRUE), .groups = "drop")
+        
+        p <- ggplot(chart_data, aes(x = hour_of_day, y = avg_heart_rate,
+                                    color = participantID, group = participantID)) +
+          geom_line(linewidth = 0.8, alpha = 0.8) +
+          geom_point(size = 1.5, alpha = 0.7) +
+          labs(x = "Hour of Day", y = "Average Heart Rate (bpm)", color = "Participant") +
+          scale_x_continuous(breaks = seq(0, 23, by = 2),
+                             labels = sprintf("%02d:00", seq(0, 23, by = 2))) +
+          dash_theme() +
+          theme(axis.text.x = element_text(size = 8))
+      } else {
+        chart_data <- df %>%
+          filter(!is.na(datetime)) %>%
+          mutate(hour_of_day = hour(datetime)) %>%
+          group_by(study_day, hour_of_day) %>%
+          summarise(avg_heart_rate = mean(heart_rate_avg, na.rm = TRUE), .groups = "drop")
+        
+        p <- ggplot(chart_data, aes(x = hour_of_day, y = avg_heart_rate,
+                                    color = factor(study_day), group = factor(study_day))) +
+          geom_line(linewidth = 0.8, alpha = 0.8) +
+          geom_point(size = 1.5, alpha = 0.7) +
+          labs(x = "Hour of Day", y = "Average Heart Rate (bpm)", color = "Study Day") +
+          scale_x_continuous(breaks = seq(0, 23, by = 2),
+                             labels = sprintf("%02d:00", seq(0, 23, by = 2))) +
+          dash_theme() +
+          theme(axis.text.x = element_text(size = 8))
+      }
     } else {
       chart_data <- df %>%
         filter(!is.na(datetime)) %>%
@@ -1723,7 +1767,10 @@ server <- function(input, output, session) {
     
     ggplotly(p, tooltip = c("x", "y")) %>%
       layout(hoverlabel = list(bgcolor = clr$bg),
-             margin = list(l = 50, r = 20, t = 20, b = 60))
+             xaxis = list(tickangle = -45),
+             legend = list(orientation = "h", xanchor = "center",
+                           x = 0.5, y = -0.5, title = list(text = "")),
+             margin = list(l = 50, r = 20, t = 20, b = 80))
   })
   #------------------------- end by hour
   
@@ -1746,7 +1793,9 @@ server <- function(input, output, session) {
         geom_line(color = clr$hrv, linewidth = 0.8) +
         geom_point(color = clr$hrv, size = 3, alpha = 0.9) +
         scale_x_continuous(breaks = scales::pretty_breaks()) +
-        labs(x = "Study Day", y = "RMSSD (ms)") +
+        labs(x = "Study Day", 
+             y = if (isTRUE(auth$is_admin) && is.null(current_participant())) 
+               "Avg RMSSD (ms, all participants)" else "RMSSD (ms)") +
         dash_theme()
     } else {
       chart_data <- df %>%
