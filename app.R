@@ -313,7 +313,8 @@ ui <- fluidPage(
   useShinyjs(),
   
   tags$head(
-    tags$link(rel = "stylesheet", type = "text/css", href = "custom.css")
+    tags$link(rel = "stylesheet", type = "text/css", href = paste0("custom.css?v=", as.numeric(Sys.time()))
+              )
   ),
   
   # ==================== TOP BAR ====================
@@ -347,9 +348,12 @@ ui <- fluidPage(
           # Allows filtering by calendar date range
           conditionalPanel(
             condition = "input.view_mode == 'date'",
-            dateRangeInput("date_range", NULL, 
-                           start = NULL, end = NULL, 
-                           width = "280px")
+            div(
+              tags$label("Select Date:", `for` = "date_range"),
+              dateRangeInput("date_range", NULL, 
+                             start = NULL, end = NULL, 
+                             width = "280px")
+            )
           ),
           
           # Day picker (shown when "day" selected)
@@ -361,9 +365,13 @@ ui <- fluidPage(
           
           # Admin participant selector (hidden for non-admins)
           div(id = "admin_selector_container", class = "admin-selector", style = "display: none;",
-              selectInput("admin_participant", NULL,
-                          choices = c("All Participants" = "ALL"),
-                          width = "220px"))
+              div(
+                tags$label("Participant:", `for` = "admin_participant-selectized", id = "participant-label"),
+                selectInput("admin_participant", NULL,
+                            choices = c("All Participants" = "ALL"),
+                            width = "220px")
+              )
+              )
       ),
       
       # ========== MAIN CONTENT AREA ==========
@@ -1033,10 +1041,13 @@ server <- function(input, output, session) {
   
   heart_rate_tab_content <- function(is_admin) {
     init_chart_card("hr_timeseries", is_admin)
+    init_chart_card("hr_distribution", is_admin)
+    init_chart_card("hr_by_hour", is_admin)
+    
     tagList(
       br(),
-      # Heart Rate Time Series Chart -----------------
       fluidRow(
+        # Heart Rate Time Series
         column(12, chart_card_ui(
           chart_id  = "hr_timeseries",
           title     = "Heart Rate Time Series",
@@ -1045,90 +1056,164 @@ server <- function(input, output, session) {
           height    = "400px"
         ))
       ),
-      # ---------------------------------------------
+      # Heart Rate Distribution
       fluidRow(
-        column(6, div(class = "chart-card",
-                      p("Heart Rate Distribution", class = "chart-title"),
-                      plotlyOutput("hr_distribution", height = "300px"))),
-        column(6, div(class = "chart-card",
-                      p("Heart Rate by Hour of Day", class = "chart-title"),
-                      plotlyOutput("hr_by_hour", height = "300px")))
+        column(6, chart_card_ui(
+          chart_id  = "hr_distribution",
+          title     = "Heart Rate Distribution",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "300px"
+        )),
+        # Heart Rate by Hour of Day
+        column(6, chart_card_ui(
+          chart_id  = "hr_by_hour",
+          title     = "Heart Rate by Hour of Day",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "300px"
+        ))
       ),
-      # --- ADMIN-ONLY: this chart is gated by ADMIN_ONLY_CHARTS, see top of file ---
       if (is_admin || !("hrv_chart" %in% ADMIN_ONLY_CHARTS)) {
+        init_chart_card("hrv_chart", is_admin)
+        # Heart Rate Variability
         fluidRow(
-          column(12, div(class = "chart-card",
-                         p("Heart Rate Variability (HRV)", class = "chart-title"),
-                         plotlyOutput("hrv_chart", height = "300px")))
+          column(12, chart_card_ui(
+            chart_id  = "hrv_chart",
+            title     = "Heart Rate Variability (HRV)",
+            output_fn = plotlyOutput,
+            is_admin  = is_admin,
+            height    = "300px"
+          ))
         )
       }
-      # --- END ADMIN-ONLY ---
     )
   }
   
   # ================= SLEEP Tab =================
   
   sleep_tab_content <- function(is_admin) {
+    init_chart_card("sleep_duration", is_admin)
+    init_chart_card("sleep_stage_pie", is_admin)
+    init_chart_card("breathing_rate_chart", is_admin)
+    init_chart_card("hypnogram_chart", is_admin)
+    init_chart_card("sleep_efficiency_chart", is_admin)
+    
     tagList(
       br(),
       fluidRow(
-        column(6, div(class = "chart-card",
-                      p("Sleep Duration Over Time", class = "chart-title"),
-                      plotlyOutput("sleep_duration", height = "300px"))),
-        column(6, div(class = "chart-card",
-                      p("Sleep Stage Distribution", class = "chart-title"),
-                      plotlyOutput("sleep_stage_pie", height = "300px")))
+        column(6, chart_card_ui(
+          chart_id  = "sleep_duration",
+          title     = "Sleep Duration Over Time",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "300px"
+        )),
+        column(6, chart_card_ui(
+          chart_id  = "sleep_stage_pie",
+          title     = "Sleep Stage Distribution",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "300px"
+        ))
       ),
       fluidRow(
-        column(12, div(class = "chart-card",
-                       p("Breathing Rate During Sleep", class = "chart-title"),
-                       plotlyOutput("breathing_rate_chart", height = "300px")))
+        column(12, chart_card_ui(
+          chart_id  = "breathing_rate_chart",
+          title     = "Breathing Rate During Sleep",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "300px"
+        ))
       ),
       fluidRow(
-        column(12, div(class = "chart-card",
-                       p("Hypnogram", class = "chart-title"),
-                       selectInput("hypnogram_date", "Select night:", choices = NULL, width = "200px"),
-                       plotlyOutput("hypnogram_chart", height = "300px")))
+        column(12, chart_card_ui(
+          chart_id  = "hypnogram_chart",
+          title     = "Hypnogram",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "300px",
+          extra_ui  = selectInput("hypnogram_date", "Select night:", choices = NULL, width = "200px")
+        ))
       ),
       fluidRow(
-        column(12, div(class = "chart-card",
-                       p("Sleep Efficiency", class = "chart-title"),
-                       plotlyOutput("sleep_efficiency_chart", height = "300px")))
+        column(12, chart_card_ui(
+          chart_id  = "sleep_efficiency_chart",
+          title     = "Sleep Efficiency",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "300px"
+        ))
       )
     )
   }
   
+  # ================= ACTIVITY Tab =================
+  
   activity_tab_content <- function(is_admin) {
+    init_chart_card("zone_minutes_chart", is_admin)
+    init_chart_card("exercise_sessions_chart", is_admin)
+    init_chart_card("sedentary_chart", is_admin)
+    init_chart_card("activity_steps_chart", is_admin)
+    init_chart_card("activity_steps_by_hour", is_admin)
+    init_chart_card("activity_distance_chart", is_admin)
+    
     tagList(
       br(),
       fluidRow(
-        column(6, div(class = "chart-card",
-                      p("Zone Minutes (Fat Burn / Cardio / Peak)", class = "chart-title"),
-                      plotlyOutput("zone_minutes_chart", height = "300px"))),
-        column(6, div(class = "chart-card",
-                      p("Exercise Sessions", class = "chart-title"),
-                      plotlyOutput("exercise_sessions_chart", height = "300px")))
+        column(6, chart_card_ui(
+          chart_id  = "zone_minutes_chart",
+          title     = "Zone Minutes (Fat Burn / Cardio / Peak)",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "300px"
+        )),
+        column(6, chart_card_ui(
+          chart_id  = "exercise_sessions_chart",
+          title     = "Exercise Sessions",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "300px"
+        ))
       ),
       fluidRow(
-        column(12, div(class = "chart-card",
-                       p("Sedentary Periods", class = "chart-title"),
-                       plotlyOutput("sedentary_chart", height = "250px")))
+        column(12, chart_card_ui(
+          chart_id  = "sedentary_chart",
+          title     = "Sedentary Periods",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "250px"
+        ))
       ),
       fluidRow(
-        column(12, div(class = "chart-card",
-                       p("Daily Steps with Goal Line", class = "chart-title"),
-                       plotlyOutput("activity_steps_chart", height = "280px")))
+        column(12, chart_card_ui(
+          chart_id  = "activity_steps_chart",
+          title     = "Daily Steps with Goal Line",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "280px"
+        ))
       ),
       fluidRow(
-        column(6, div(class = "chart-card",
-                      p("Steps by Hour of Day", class = "chart-title"),
-                      plotlyOutput("activity_steps_by_hour", height = "280px"))),
-        column(6, div(class = "chart-card",
-                      p("Distance per Day", class = "chart-title"),
-                      plotlyOutput("activity_distance_chart", height = "280px")))
+        column(6, chart_card_ui(
+          chart_id  = "activity_steps_by_hour",
+          title     = "Steps by Hour of Day",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "280px"
+        )),
+        column(6, chart_card_ui(
+          chart_id  = "activity_distance_chart",
+          title     = "Distance per Day",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "280px"
+        ))
       )
     )
   }
+  
+  # ================= INSIGHTS Tab =================
   
   insights_tab_content <- function(is_admin) {
     tagList(
@@ -1147,6 +1232,8 @@ server <- function(input, output, session) {
     )
   }
   
+  # ================= PROJECTIONS Tab =================
+  
   projections_tab_content <- function(is_admin) {
     tagList(
       br(),
@@ -1158,45 +1245,76 @@ server <- function(input, output, session) {
     )
   }
   
+  # ================= ANALYSIS Tab =================
+  
   analysis_tab_content <- function(is_admin) {
+    init_chart_card("admin_hr_comparison", is_admin)
+    init_chart_card("admin_steps_comparison", is_admin)
+    init_chart_card("admin_completeness_heatmap", is_admin)
+    init_chart_card("admin_summary_table", is_admin)
+    
     tagList(
       br(),
       fluidRow(
-        column(12, div(class = "chart-card",
-                       p("Multi-Participant Heart Rate Comparison", class = "chart-title"),
-                       plotlyOutput("admin_hr_comparison", height = "320px")))
+        column(12, chart_card_ui(
+          chart_id  = "admin_hr_comparison",
+          title     = "Multi-Participant Heart Rate Comparison",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "320px"
+        ))
       ),
       fluidRow(
-        column(12, div(class = "chart-card",
-                       p("Multi-Participant Steps Comparison", class = "chart-title"),
-                       plotlyOutput("admin_steps_comparison", height = "320px")))
+        column(12, chart_card_ui(
+          chart_id  = "admin_steps_comparison",
+          title     = "Multi-Participant Steps Comparison",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "320px"
+        ))
       ),
       fluidRow(
-        column(12, div(class = "chart-card",
-                       p("Data Completeness Heatmap", class = "chart-title"),
-                       plotlyOutput("admin_completeness_heatmap", height = "300px")))
+        column(12, chart_card_ui(
+          chart_id  = "admin_completeness_heatmap",
+          title     = "Data Completeness Heatmap",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "300px"
+        ))
       ),
       fluidRow(
-        column(12, div(class = "chart-card",
-                       p("Participant Activity Summary", class = "chart-title"),
-                       DTOutput("admin_summary_table")))
+        column(12, chart_card_ui(
+          chart_id  = "admin_summary_table",
+          title     = "Participant Activity Summary",
+          output_fn = DTOutput,
+          is_admin  = is_admin
+        ))
       )
     )
   }
   
+  # ================= DATA Tab =================
+  
   data_view_tab_content <- function(is_admin) {
+    init_chart_card("data_view_table", is_admin)
+    
     tagList(
       br(),
       fluidRow(
-        column(12, div(class = "chart-card",
-                       p("Raw Data Viewer", class = "chart-title"),
-                       p("Select a dataset to view its raw contents."),
-                       selectInput("data_view_select", "Choose Dataset",
-                                   choices = c("Heart Rate", "Steps", "Sleep", "Daily Metrics", 
-                                               "HRV", "Activity Level", "Zone Minutes", 
-                                               "Activity Sessions", "Sedentary Periods", "SpO2"),
-                                   width = "300px"),
-                       DT::dataTableOutput("data_view_table")))
+        column(12, chart_card_ui(
+          chart_id  = "data_view_table",
+          title     = "Raw Data Viewer",
+          output_fn = DT::dataTableOutput,
+          is_admin  = is_admin,
+          extra_ui  = tagList(
+            p("Select a dataset to view its raw contents."),
+            selectInput("data_view_select", "Choose Dataset",
+                        choices = c("Heart Rate", "Steps", "Sleep", "Daily Metrics",
+                                    "HRV", "Activity Level", "Zone Minutes",
+                                    "Activity Sessions", "Sedentary Periods", "SpO2"),
+                        width = "300px")
+          )
+        ))
       )
     )
   }
@@ -1927,6 +2045,8 @@ server <- function(input, output, session) {
       d <- d %>%
         mutate(
           activity_type = tolower(trimws(exercise_type)),  # map exercise_type to activity_type
+          activity_label = ifelse(activity_type %in% names(activity_color_map),
+                                  activity_type, "other"),
           point_color   = ifelse(activity_type %in% names(activity_color_map),
                                  activity_color_map[activity_type],
                                  clr$steps),
@@ -1955,12 +2075,14 @@ server <- function(input, output, session) {
         scale_x_date(date_labels = "%b %d")
     }
     
+    full_color_map <- c(activity_color_map, other = clr$steps)
+    
     p <- p +
       geom_point(alpha = 0.85) +
       scale_color_identity(
         guide  = if (has_type) "legend" else "none",
-        labels = if (has_type) names(activity_color_map) else NULL,
-        breaks = if (has_type) unname(activity_color_map) else NULL
+        labels = if (has_type) names(full_color_map) else NULL,
+        breaks = if (has_type) unname(full_color_map) else NULL
       ) +
       scale_size_continuous(range = c(4, 16), guide = "none") +
       scale_y_continuous(breaks = scales::pretty_breaks()) +

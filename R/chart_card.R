@@ -47,18 +47,7 @@
 
 CHART_INFO <- list(
   
-  hr_timeseries = HTML("
-    <b>What this shows:</b><br>
-    Heart rate trends over time, plotted from 5-minute interval averages.<br><br>
-    <b>Data source:</b><br>
-    hr_intraday_5m.csv (5-minute intervals from Fitbit)<br><br>
-    <b>Filters applied:</b><br>
-    &bull; Values between 30-220 bpm only<br>
-    &bull; Your selected date range or study day range<br><br>
-    <b>View modes:</b><br>
-    &bull; <b>By Date:</b> Calendar dates, raw 5-minute points with a smoothed trend line<br>
-    &bull; <b>By Study Day:</b> One averaged point per study day
-  "),
+  # Overview
   
   plot_hr = HTML("
   <b>What this shows:</b><br>
@@ -87,6 +76,214 @@ CHART_INFO <- list(
   sleep_minute.csv<br><br>
   <b>Note:</b><br>
   Wake minutes are excluded from this chart.
+"),
+  
+  # Heart Rate Tab
+  
+  hr_timeseries = HTML("
+  <b>What this shows:</b><br>
+  Heart rate trends over time, plotted from 5-minute interval averages.<br><br>
+  <b>Data source:</b><br>
+  hr_intraday_5m.csv (5-minute intervals from Fitbit)<br><br>
+  <b>Filters applied:</b><br>
+  &bull; Values between 30-220 bpm only<br>
+  &bull; Your selected date range or study day range<br><br>
+  <b>View modes:</b><br>
+  &bull; <b>By Date:</b> Calendar dates, raw 5-minute points with a smoothed trend line<br>
+  &bull; <b>By Study Day:</b> One averaged point per study day
+"),
+  
+  hr_distribution = HTML("
+  <b>What this shows:</b><br>
+  Distribution of heart rate readings across the selected range.<br><br>
+  <b>Data source:</b><br>
+  hr_intraday_5m.csv<br><br>
+  <b>View modes:</b><br>
+  &bull; <b>By Date:</b> One combined histogram<br>
+  &bull; <b>By Study Day:</b> Color-coded by study day
+"),
+  
+  hr_by_hour = HTML("
+  <b>What this shows:</b><br>
+  Average heart rate by hour of day, revealing daily rhythm patterns.<br><br>
+  <b>Data source:</b><br>
+  hr_intraday_5m.csv<br><br>
+  <b>View modes:</b><br>
+  &bull; <b>By Date:</b> Bars with standard deviation error bars<br>
+  &bull; <b>By Study Day:</b> Separate line per study day
+"),
+  
+  hrv_chart = HTML("
+  <b>What this shows:</b><br>
+  Heart rate variability (RMSSD), a marker of autonomic nervous system activity.<br><br>
+  <b>Data source:</b><br>
+  hrv_intraday.csv<br><br>
+  <b>Visibility:</b><br>
+  Admin-only chart.<br><br>
+  <b>View modes:</b><br>
+  &bull; <b>By Date:</b> Raw points over time<br>
+  &bull; <b>By Study Day:</b> Averaged per study day
+"),
+  
+  # Sleep Tab
+  
+  sleep_duration = HTML("
+  <b>What this shows:</b><br>
+  Total minutes of tracked sleep stages (Deep, REM, Light, Wake) per night.<br><br>
+  <b>Data source:</b><br>
+  sleep_minute.csv<br><br>
+  <b>View modes:</b><br>
+  &bull; <b>By Date:</b> Calendar dates<br>
+  &bull; <b>By Study Day:</b> Totaled per study day
+"),
+  
+  sleep_stage_pie = HTML("
+  <b>What this shows:</b><br>
+  Overall proportion of time spent in each sleep stage across the selected range.<br><br>
+  <b>Data source:</b><br>
+  sleep_minute.csv
+"),
+  
+  breathing_rate_chart = HTML("
+  <b>What this shows:</b><br>
+  Breathing rate during sleep, broken out by sleep stage plus a Full Sleep aggregate line.<br><br>
+  <b>Data source:</b><br>
+  breathing_rate_summary.csv<br><br>
+  <b>View modes:</b><br>
+  &bull; <b>By Date:</b> Calendar dates<br>
+  &bull; <b>By Study Day:</b> Per study day
+"),
+  
+  hypnogram_chart = HTML("
+  <b>What this shows:</b><br>
+  Sleep stage transitions across a single selected night.<br><br>
+  <b>Data source:</b><br>
+  sleep_minute.csv<br><br>
+  <b>Note:</b><br>
+  Use the night selector to choose which date's hypnogram to view.
+"),
+  
+  sleep_efficiency_chart = HTML("
+  <b>What this shows:</b><br>
+  Percent of time in bed actually spent asleep (not awake), with an 85% target line.<br><br>
+  <b>Data source:</b><br>
+  sleep_minute.csv<br><br>
+  <b>View modes:</b><br>
+  &bull; <b>By Date:</b> Calendar dates<br>
+  &bull; <b>By Study Day:</b> Per study day
+"),
+  
+  # Activity
+  
+  zone_minutes_chart = HTML("
+  <b>What this shows:</b><br>
+  Minutes spent in each heart rate intensity zone: Fat Burn, Cardio, and Peak.<br><br>
+  <b>Data source:</b><br>
+  zone_minutes_intraday_5m.csv<br><br>
+  <b>View modes:</b><br>
+  &bull; <b>By Date:</b> Calendar dates<br>
+  &bull; <b>By Study Day:</b> Per study day
+"),
+  
+  exercise_sessions_chart = HTML("
+  <b>What this shows:</b><br>
+  Individual logged exercise sessions, sized by duration and colored by activity type.<br><br>
+  <b>Data source:</b><br>
+  activity_sessions.csv<br><br>
+  <b>Note:</b><br>
+  Activity types outside the standard set (walk, run, bike, sport, workout, swim, yoga) are grouped as \"Other.\"
+"),
+  
+  sedentary_chart = HTML("
+  <b>What this shows:</b><br>
+  Total minutes spent sedentary per day.<br><br>
+  <b>Data source:</b><br>
+  sedentary_periods.csv<br><br>
+  <b>View modes:</b><br>
+  &bull; <b>By Date:</b> Calendar dates<br>
+  &bull; <b>By Study Day:</b> Per study day
+"),
+  
+  activity_steps_chart = HTML("
+  <b>What this shows:</b><br>
+  Total daily steps with a 10,000-step goal line.<br><br>
+  <b>Data source:</b><br>
+  steps_intraday_5m.csv<br><br>
+  <b>Note:</b><br>
+  Same underlying data as the Overview tab's Daily Steps chart.
+"),
+  
+  activity_steps_by_hour = HTML("
+  <b>What this shows:</b><br>
+  Average steps by hour of day, revealing activity patterns across the day.<br><br>
+  <b>Data source:</b><br>
+  steps_intraday_5m.csv<br><br>
+  <b>View modes:</b><br>
+  &bull; <b>By Date:</b> One combined bar chart<br>
+  &bull; <b>By Study Day:</b> Separate line per study day
+"),
+  
+  activity_distance_chart = HTML("
+  <b>What this shows:</b><br>
+  Total distance traveled per day, in meters.<br><br>
+  <b>Data source:</b><br>
+  distance_intraday.csv<br><br>
+  <b>View modes:</b><br>
+  &bull; <b>By Date:</b> Calendar dates<br>
+  &bull; <b>By Study Day:</b> Per study day
+"),
+  
+  #analysis
+  
+  admin_hr_comparison = HTML("
+  <b>What this shows:</b><br>
+  Average heart rate per participant over time, aligned by study day for
+  cross-participant comparison.<br><br>
+  <b>Data source:</b><br>
+  hr_intraday_5m.csv<br><br>
+  <b>Note:</b><br>
+  Admin-only. Each line represents one participant.
+"),
+  
+  admin_steps_comparison = HTML("
+  <b>What this shows:</b><br>
+  Total daily steps per participant, side by side for direct comparison.<br><br>
+  <b>Data source:</b><br>
+  steps_intraday_5m.csv<br><br>
+  <b>Note:</b><br>
+  Admin-only. Each color represents one participant.
+"),
+  
+  admin_completeness_heatmap = HTML("
+  <b>What this shows:</b><br>
+  Which data sources (heart rate, steps, sleep) are present for each
+  participant on each date. Darker = more sources present.<br><br>
+  <b>Data source:</b><br>
+  hr_intraday_5m.csv, steps_intraday_5m.csv, sleep_minute.csv<br><br>
+  <b>Note:</b><br>
+  Admin-only. Useful for spotting data gaps before analysis.
+"),
+  
+  admin_summary_table = HTML("
+  <b>What this shows:</b><br>
+  Per-participant averages for key metrics across the selected date range:
+  resting heart rate, steps, sleep duration, SpO2, and HRV.<br><br>
+  <b>Data source:</b><br>
+  daily_metrics.csv<br><br>
+  <b>Note:</b><br>
+  Admin-only.
+"),
+  # data view
+  
+  data_view_table = HTML("
+  <b>What this shows:</b><br>
+  Raw CSV data for any dataset, exactly as loaded and filtered by your
+  current date or study day selection.<br><br>
+  <b>Available datasets:</b><br>
+  Heart Rate, Steps, Sleep, Daily Metrics, HRV, Activity Level,
+  Zone Minutes, Activity Sessions, Sedentary Periods, SpO2<br><br>
+  <b>Note:</b><br>
+  Admin-only. Use the dataset selector to switch between tables.
 ")
   
 )
@@ -113,7 +310,7 @@ CHART_INFO <- list(
 #'
 #' @return A tagList containing the full chart card: header (title + icons)
 #'   and a collapsible body wrapping the chart output.
-chart_card_ui <- function(chart_id, title, output_fn, is_admin = FALSE, ...) {
+chart_card_ui <- function(chart_id, title, output_fn, is_admin = FALSE, extra_ui = NULL, ...) {
   
   body_id <- paste0(chart_id, "_body")
   
@@ -166,6 +363,7 @@ chart_card_ui <- function(chart_id, title, output_fn, is_admin = FALSE, ...) {
       # starts with no inline display style; app.R's initialization step
       # sets the correct starting visibility via shinyjs once, on app load.
       div(id = body_id,
+          extra_ui,
           output_fn(chart_id, ...)
       )
   )
