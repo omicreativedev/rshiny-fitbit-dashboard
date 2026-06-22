@@ -337,30 +337,32 @@ ui <- fluidPage(
       div(class = "filters-row",
           
           # View mode toggle: Switch between Date and Study Day views
-          div(class = "view-toggle",
-              radioButtons("view_mode", NULL, 
-                           choices = c("By Date" = "date", "By Study Day" = "day"),
-                           selected = "date", 
-                           inline = TRUE)
+          div(id = "view_toggle_container",
+              div(class = "view-toggle",
+                  radioButtons("view_mode", NULL, 
+                               choices = c("By Date" = "date", "By Study Day" = "day"),
+                               selected = "date", 
+                               inline = TRUE)
+              )
           ),
           
-          # Date picker (shown when "date" selected)
-          # Allows filtering by calendar date range
-          conditionalPanel(
-            condition = "input.view_mode == 'date'",
-            div(
-              tags$label("Select Date:", `for` = "date_range"),
-              dateRangeInput("date_range", NULL, 
-                             start = NULL, end = NULL, 
-                             width = "280px")
-            )
+          div(id = "date_picker_container",
+              conditionalPanel(
+                condition = "input.view_mode == 'date'",
+                div(
+                  tags$label("Select Date:", `for` = "date_range"),
+                  dateRangeInput("date_range", NULL, 
+                                 start = NULL, end = NULL, 
+                                 width = "280px")
+                )
+              )
           ),
           
-          # Day picker (shown when "day" selected)
-          # Dynamically generates slider with "Day 1 - Monday" labels
-          conditionalPanel(
-            condition = "input.view_mode == 'day'",
-            uiOutput("day_range_ui")
+          div(id = "day_picker_container",
+              conditionalPanel(
+                condition = "input.view_mode == 'day'",
+                uiOutput("day_range_ui")
+              )
           ),
           
           # Admin participant selector (hidden for non-admins)
@@ -388,6 +390,8 @@ ui <- fluidPage(
 server <- function(input, output, session) {
   
   # ==================== REACTIVE VALUES ====================
+  
+  pre_analysis_participant <- reactiveVal(NULL)
   
   # Authentication state
   auth <- reactiveValues(
@@ -606,6 +610,61 @@ server <- function(input, output, session) {
                          end   = dates$end)
   })
   
+  # ==================== TOOLBAR VISIBILITY ====================
+  observe({
+    req(auth$logged_in)
+    
+    tab <- input$main_tabs
+    is_admin <- auth$is_admin
+    participant <- if (is_admin) input$admin_participant else "INDIVIDUAL"
+    is_all <- is_admin && participant == "ALL"
+    is_analysis <- !is.null(tab) && tab == "Analysis"
+    is_data_view <- !is.null(tab) && tab == "Data View"
+    
+    if (is_data_view) {
+      # Data View: full toolbar unchanged
+      shinyjs::show("view_toggle_container")
+      shinyjs::show("date_picker_container")
+      shinyjs::show("day_picker_container")
+      shinyjs::show("admin_selector_container")
+      return()
+    }
+    
+    if (is_analysis) {
+      # Save current participant selection before forcing ALL
+      if (!is.null(input$admin_participant) && input$admin_participant != "ALL") {
+        pre_analysis_participant(input$admin_participant)
+      }
+      shinyjs::hide("view_toggle_container")
+      shinyjs::hide("date_picker_container")
+      shinyjs::hide("admin_selector_container")
+      updateRadioButtons(session, "view_mode", selected = "day")
+      updateSelectInput(session, "admin_participant", selected = "ALL")
+      return()
+    }
+    
+    # Restore previous participant selection when leaving Analysis
+    if (!is.null(pre_analysis_participant())) {
+      updateSelectInput(session, "admin_participant", 
+                        selected = pre_analysis_participant())
+      pre_analysis_participant(NULL)
+    }
+    
+    if (is_all) {
+      # All Participants on user tabs: hide radio + date picker
+      shinyjs::hide("view_toggle_container")
+      shinyjs::hide("date_picker_container")
+      shinyjs::show("admin_selector_container")
+      updateRadioButtons(session, "view_mode", selected = "day")
+      return()
+    }
+    
+    # Individual participant or regular user: full toolbar
+    shinyjs::show("view_toggle_container")
+    shinyjs::show("date_picker_container")
+    shinyjs::show("admin_selector_container")
+  })
+  
   # ==================== STUDY DAY RANGE UI ====================
   
   # Dynamically generate the study day slider with day labels
@@ -636,7 +695,13 @@ server <- function(input, output, session) {
     n_days <- as.integer(end_date - start_date) + 1
     dates_seq <- seq(start_date, end_date, by = "day")
     #day_labels <- paste0("Day ", seq_len(n_days), " - ", weekdays(dates_seq))
-    day_labels <- paste0("Day ", seq_len(n_days), ": ", strftime(dates_seq, "%a"))
+    #day_labels <- paste0("Day ", seq_len(n_days), ": ", strftime(dates_seq, "%a"))
+    # -- fix
+    day_labels <- if (is.null(current_participant())) {
+      paste0("Day ", seq_len(n_days))
+    } else {
+      paste0("Day ", seq_len(n_days), ": ", strftime(dates_seq, "%a"))
+    }
     
     fluidRow(
       column(6, selectInput("study_day_start", "From:",
@@ -722,8 +787,10 @@ server <- function(input, output, session) {
     # Extract the number from "Day 3 - Wednesday" → 3
     #day_start <- as.integer(sub("Day (\\d+) - .*", "\\1", input$study_day_start))
     #day_end   <- as.integer(sub("Day (\\d+) - .*", "\\1", input$study_day_end))
-    day_start <- as.integer(sub("Day (\\d+):.*", "\\1", input$study_day_start))
-    day_end   <- as.integer(sub("Day (\\d+):.*", "\\1", input$study_day_end))
+    #day_start <- as.integer(sub("Day (\\d+):.*", "\\1", input$study_day_start))
+    #day_end   <- as.integer(sub("Day (\\d+):.*", "\\1", input$study_day_end))
+    day_start <- as.integer(sub("Day (\\d+).*", "\\1", input$study_day_start))
+    day_end   <- as.integer(sub("Day (\\d+).*", "\\1", input$study_day_end))
     
     lapply(data, function(df) {
       if ("study_day" %in% names(df)) {
@@ -977,7 +1044,7 @@ server <- function(input, output, session) {
     # before passing to tabsetPanel
     tab_panels <- Filter(Negate(is.null), tab_panels)
     
-    do.call(tabsetPanel, tab_panels)
+    do.call(tabsetPanel, c(list(id = "main_tabs"), tab_panels))
   })
   
   # ==================== TAB CONTENT FUNCTIONS ====================
@@ -1333,16 +1400,31 @@ server <- function(input, output, session) {
     
     # Determine x-axis based on view mode
     if (input$view_mode == "day") {
-      # Study Day view: aggregate by study_day and show as line chart
-      df <- df %>%
-        group_by(study_day) %>%
-        summarise(heart_rate_avg = mean(heart_rate_avg, na.rm = TRUE)) %>%
-        ungroup()
+      is_all <- auth$is_admin && is.null(current_participant())
       
-      p <- ggplot(df, aes(x = study_day, y = heart_rate_avg)) +
-        geom_line(color = clr$hr, linewidth = 0.5, alpha = 0.8) +
-        labs(x = "Study Day", y = "bpm") +
-        dash_theme()
+      if (is_all) {
+        df <- df %>%
+          group_by(study_day) %>%
+          summarise(heart_rate_avg = mean(heart_rate_avg, na.rm = TRUE),
+                    .groups = "drop")
+        
+        p <- ggplot(df, aes(x = study_day, y = heart_rate_avg)) +
+          geom_line(color = clr$hr, linewidth = 0.5, alpha = 0.8) +
+          geom_point(color = clr$hr, size = 2, alpha = 0.8) +
+          labs(x = "Study Day", y = "Avg bpm (all participants)") +
+          scale_x_continuous(breaks = scales::pretty_breaks()) +
+          dash_theme()
+      } else {
+        df <- df %>%
+          group_by(study_day) %>%
+          summarise(heart_rate_avg = mean(heart_rate_avg, na.rm = TRUE)) %>%
+          ungroup()
+        
+        p <- ggplot(df, aes(x = study_day, y = heart_rate_avg)) +
+          geom_line(color = clr$hr, linewidth = 0.5, alpha = 0.8) +
+          labs(x = "Study Day", y = "bpm") +
+          dash_theme()
+      }
     } else {
       # Date view: show datetime on x-axis
       p <- ggplot(df, aes(x = datetime, y = heart_rate_avg)) +
@@ -1366,17 +1448,27 @@ server <- function(input, output, session) {
     }
     
     if (input$view_mode == "day") {
-      # Study Day view: aggregate by study_day
-      daily_steps <- df %>%
-        group_by(study_day) %>%
-        summarise(total = sum(steps_5min, na.rm = TRUE))
+      is_all <- auth$is_admin && is.null(current_participant())
+      
+      if (is_all) {
+        daily_steps <- df %>%
+          group_by(participantID, study_day) %>%
+          summarise(total = sum(steps_5min, na.rm = TRUE), .groups = "drop") %>%
+          group_by(study_day) %>%
+          summarise(total = mean(total, na.rm = TRUE), .groups = "drop")
+      } else {
+        daily_steps <- df %>%
+          group_by(study_day) %>%
+          summarise(total = sum(steps_5min, na.rm = TRUE))
+      }
       
       p <- ggplot(daily_steps, aes(x = study_day, y = total)) +
         geom_col(fill = clr$steps, width = 0.7, alpha = 0.9) +
         geom_hline(yintercept = 10000, linetype = "dashed", 
                    color = clr$target_line, linewidth = 0.5) +
         scale_y_continuous(labels = scales::comma) +
-        labs(x = "Study Day", y = "steps") +
+        labs(x = "Study Day", 
+             y = if (is_all) "Avg steps (all participants)" else "steps") +
         dash_theme()
     } else {
       # Date view: show calendar dates on x-axis
@@ -1460,11 +1552,20 @@ server <- function(input, output, session) {
     }
     
     if (input$view_mode == "day" && has_study_day) {
-      # Study Day view: show study_day on x-axis
+      is_all <- auth$is_admin && is.null(current_participant())
+      
+      if (is_all) {
+        sleep_summary <- sleep_summary %>%
+          group_by(study_day, sleep_stage) %>%
+          summarise(minutes = mean(minutes, na.rm = TRUE), .groups = "drop")
+      }
+      
       p <- ggplot(sleep_summary, aes(x = study_day, y = minutes, fill = sleep_stage)) +
         geom_col(width = 0.7, alpha = 0.9) +
         scale_fill_manual(values = c(Deep = clr$deep, REM = clr$rem, Light = clr$light)) +
-        labs(x = "Study Day", y = "minutes") +
+        labs(x = "Study Day",
+             y = if (is_all) "Avg minutes (all participants)" else "minutes",
+             fill = "Sleep Stage") +
         dash_theme()
     } else {
       # Date view: show calendar dates on x-axis
@@ -1473,7 +1574,7 @@ server <- function(input, output, session) {
         geom_col(width = 0.7, alpha = 0.9) +
         scale_fill_manual(values = c(Deep = clr$deep, REM = clr$rem, Light = clr$light)) +
         scale_x_date(date_labels = "%b %d") +
-        labs(x = NULL, y = "minutes") +
+        labs(x = NULL, y = "minutes", fill = "Sleep Stage") +
         dash_theme()
       
       # If we're in day mode but no study_day, show a warning in the plot title
@@ -1484,7 +1585,9 @@ server <- function(input, output, session) {
     
     ggplotly(p) %>% 
       layout(hoverlabel = list(bgcolor = clr$bg),
-             margin = list(l = 50, r = 20, t = 50, b = 40))
+             legend = list(orientation = "h", xanchor = "center", 
+                           x = 0.5, y = -0.5),
+             margin = list(l = 50, r = 20, t = 50, b = 80))
   })
   
   # ==================== PLACEHOLDER CHARTS (OTHER TABS) ====================
