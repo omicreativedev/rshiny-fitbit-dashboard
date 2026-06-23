@@ -497,6 +497,62 @@ server <- function(input, output, session) {
     }, ignoreInit = TRUE)
   }
   
+  # ==================== METRIC CARD INITIALIZATION ====================
+  init_metric_card <- function(card_id, is_admin) {
+    toggle_ui_id    <- paste0(card_id, "_toggle_ui")
+    toggle_click_id <- paste0(card_id, "_toggle_click")
+    value_id        <- paste0(card_id, "_value")
+    hidden_id       <- paste0(card_id, "_hidden")
+    
+    if (is.null(isolate(chart_state[[card_id]]))) {
+      starts_hidden <- isTRUE(is_admin)
+      chart_state[[card_id]] <- starts_hidden
+      
+      if (starts_hidden) {
+        shinyjs::delay(100, {
+          shinyjs::hide(value_id)
+          shinyjs::show(hidden_id)
+        })
+      } else {
+        shinyjs::delay(100, {
+          shinyjs::show(value_id)
+          shinyjs::hide(hidden_id)
+        })
+      }
+    }
+    
+    output[[toggle_ui_id]] <- renderUI({
+      hidden <- isTRUE(chart_state[[card_id]])
+      icon_name  <- if (hidden) "eye-slash-fill" else "eye"
+      icon_class <- if (hidden) "chart-toggle-collapsed" else "chart-toggle-open"
+      actionLink(
+        inputId = toggle_click_id,
+        label   = bsicons::bs_icon(icon_name, size = "0.8em"),
+        class   = paste("chart-toggle-trigger", icon_class)
+      )
+    })
+    
+    if (isTRUE(isolate(chart_observers_registered[[card_id]]))) {
+      return(invisible(NULL))
+    }
+    chart_observers_registered[[card_id]] <- TRUE
+    
+    observeEvent(input[[toggle_click_id]], {
+      now_hidden <- !isTRUE(chart_state[[card_id]])
+      chart_state[[card_id]] <- now_hidden
+      
+      if (now_hidden) {
+        shinyjs::hide(value_id)
+        shinyjs::show(hidden_id)
+      } else {
+        shinyjs::show(value_id)
+        shinyjs::hide(hidden_id)
+      }
+    }, ignoreInit = TRUE)
+  }
+  
+  
+  
   # ==================== LOGIN UI (swaps form ↔ logout button) ====================
   
   output$login_ui <- renderUI({
@@ -1097,27 +1153,24 @@ server <- function(input, output, session) {
     init_chart_card("plot_hr", is_admin)
     init_chart_card("plot_steps", is_admin)
     init_chart_card("plot_sleep", is_admin)
+    init_metric_card("kpi_hr", is_admin)
+    init_metric_card("kpi_steps", is_admin)
+    init_metric_card("kpi_sleep", is_admin)
+    init_metric_card("kpi_spo2", is_admin)
     
     tagList(
       br(),
       fluidRow(
-        column(3, div(class = "metric-card",
-                      p("AVG HEART RATE", class = "metric-label"),
-                      h2(textOutput("card_hr"), class = "metric-value"),
-                      p("bpm", class = "metric-unit"))),
-        column(3, div(class = "metric-card",
-                      p("AVG DAILY STEPS", class = "metric-label"),
-                      h2(textOutput("card_steps"), class = "metric-value"),
-                      p("steps", class = "metric-unit"))),
-        column(3, div(class = "metric-card",
-                      p("AVG DEEP SLEEP", class = "metric-label"),
-                      h2(textOutput("card_sleep"), class = "metric-value"),
-                      p("minutes", class = "metric-unit"))),
-        column(3, div(class = "metric-card",
-                      p("AVG SPO2", class = "metric-label"),
-                      h2(textOutput("card_spo2"), class = "metric-value"),
-                      p("%", class = "metric-unit")))
+        column(3, metric_card_ui("kpi_hr",    "AVG HEART RATE",  "card_hr",
+                                 unit = "bpm",     is_admin = is_admin)),
+        column(3, metric_card_ui("kpi_steps", "AVG DAILY STEPS", "card_steps",
+                                 unit = "steps",   is_admin = is_admin)),
+        column(3, metric_card_ui("kpi_sleep", "AVG DEEP SLEEP",  "card_sleep",
+                                 unit = "minutes", is_admin = is_admin)),
+        column(3, metric_card_ui("kpi_spo2",  "AVG SPO2",        "card_spo2",
+                                 unit = "%",       is_admin = is_admin))
       ),
+      
       br(),
       fluidRow(
         column(6, chart_card_ui(
@@ -1347,8 +1400,10 @@ server <- function(input, output, session) {
   # ================= INSIGHTS Tab =================
   
   insights_tab_content <- function(is_admin) {
+    init_metric_card("insight_best_sleep_card", is_admin)
+    init_metric_card("insight_most_active_card", is_admin)
+    init_metric_card("insight_bedtime_card", is_admin)
     init_chart_card("weekday_sleep_chart", is_admin)
-    init_chart_card("weekday_steps_chart", is_admin)
     if (is_admin) {
       init_chart_card("weekday_hrv_chart", is_admin)
       init_chart_card("weekday_hr_chart", is_admin)
@@ -1357,15 +1412,15 @@ server <- function(input, output, session) {
     tagList(
       br(),
       fluidRow(
-        column(4, div(class = "metric-card",
-                      p("BEST SLEEP NIGHT", class = "metric-label"),
-                      h3(textOutput("insight_best_sleep"), class = "metric-value"))),
-        column(4, div(class = "metric-card",
-                      p("MOST ACTIVE DAY", class = "metric-label"),
-                      h3(textOutput("insight_most_active"), class = "metric-value"))),
-        column(4, div(class = "metric-card",
-                      p("TYPICAL BEDTIME", class = "metric-label"),
-                      h3(textOutput("insight_typical_bedtime"), class = "metric-value")))
+        column(4, metric_card_ui("insight_best_sleep_card", "BEST SLEEP NIGHT",
+                                 "insight_best_sleep", is_admin = is_admin,
+                                 value_size = "medium")),
+        column(4, metric_card_ui("insight_most_active_card", "MOST ACTIVE DAY",
+                                 "insight_most_active", is_admin = is_admin,
+                                 value_size = "medium")),
+        column(4, metric_card_ui("insight_bedtime_card", "TYPICAL BEDTIME",
+                                 "insight_typical_bedtime", is_admin = is_admin,
+                                 value_size = "medium"))
       ),
       br(),
       fluidRow(

@@ -574,6 +574,162 @@ CHART_INFO <- list(
     <b>Note:</b><br>
     Admin-only.
   "),
+  # ============================================================
+  # OVERVIEW KPI CARDS
+  # ============================================================
+  
+  kpi_hr = list(
+    user = HTML("
+      <b>What this shows:</b><br>
+      Your average heart rate across all readings in the selected range,
+      measured in beats per minute (bpm).<br><br>
+      <b>Data source:</b><br>
+      Fitbit 5-minute heart rate readings<br><br>
+      <b>Note:</b><br>
+      A typical resting heart rate for adults is 60–100 bpm.
+      Lower resting HR often indicates better cardiovascular fitness.
+    "),
+    admin = HTML("
+      <b>What this shows:</b><br>
+      Mean heart rate across all 5-minute interval readings
+      in the selected range, in bpm.<br><br>
+      <b>Data source:</b><br>
+      hr_intraday_5m.csv<br><br>
+      <b>Filters:</b><br>
+      Values between 30–220 bpm only.<br><br>
+      <b>All Participants mode:</b><br>
+      Average across all participants' readings combined.
+    ")
+  ),
+  
+  kpi_steps = list(
+    user = HTML("
+      <b>What this shows:</b><br>
+      Your average daily step count across the selected range.<br><br>
+      <b>Data source:</b><br>
+      Fitbit step count data<br><br>
+      <b>Note:</b><br>
+      The commonly cited goal is 10,000 steps per day,
+      though research suggests benefits begin at lower counts.
+    "),
+    admin = HTML("
+      <b>What this shows:</b><br>
+      Mean daily step total across the selected range.<br><br>
+      <b>Data source:</b><br>
+      steps_intraday_5m.csv<br><br>
+      <b>All Participants mode:</b><br>
+      Average daily steps across all participants combined.
+    ")
+  ),
+  
+  kpi_sleep = list(
+    user = HTML("
+      <b>What this shows:</b><br>
+      Your average nightly deep sleep duration in minutes
+      across the selected range.<br><br>
+      <b>Data source:</b><br>
+      Fitbit sleep stage data<br><br>
+      <b>Note:</b><br>
+      Deep sleep is the most restorative stage. Adults typically
+      get 1–2 hours of deep sleep per night (roughly 13–23% of
+      total sleep time).
+    "),
+    admin = HTML("
+      <b>What this shows:</b><br>
+      Mean nightly deep sleep minutes across the selected range.<br><br>
+      <b>Data source:</b><br>
+      sleep_minute.csv (sleep_stage == 'deep')<br><br>
+      <b>All Participants mode:</b><br>
+      Average deep sleep minutes per night across all participants.
+    ")
+  ),
+  
+  kpi_spo2 = list(
+    user = HTML("
+      <b>What this shows:</b><br>
+      Your average blood oxygen saturation (SpO2) across the
+      selected range, as a percentage.<br><br>
+      <b>Data source:</b><br>
+      Fitbit SpO2 sensor data<br><br>
+      <b>Note:</b><br>
+      Normal SpO2 is typically 95–100%. Values below 90%
+      may warrant medical attention.
+    "),
+    admin = HTML("
+      <b>What this shows:</b><br>
+      Mean SpO2 percentage across the selected range.<br><br>
+      <b>Data source:</b><br>
+      spo2_intraday.csv<br><br>
+      <b>Filters:</b><br>
+      Values between 70–100% only.<br><br>
+      <b>All Participants mode:</b><br>
+      Average SpO2 across all participants' readings combined.
+    ")
+  ),
+  
+  # ============================================================
+  # INSIGHTS METRIC CARDS
+  # ============================================================
+  
+  insight_best_sleep_card = list(
+    user = HTML("
+      <b>What this shows:</b><br>
+      The single night with the highest total sleep duration
+      in your selected range, and how many minutes you slept.<br><br>
+      <b>Data source:</b><br>
+      Fitbit nightly sleep totals
+    "),
+    admin = HTML("
+      <b>What this shows:</b><br>
+      The study day with the highest average total sleep minutes
+      across the selected range.<br><br>
+      <b>Data source:</b><br>
+      daily_metrics.csv (total_sleep_minutes)<br><br>
+      <b>All Participants mode:</b><br>
+      The study day with the highest cohort-average sleep duration.
+    ")
+  ),
+  
+  insight_most_active_card = list(
+    user = HTML("
+      <b>What this shows:</b><br>
+      The single day with the highest step count in your
+      selected range, and the total steps taken.<br><br>
+      <b>Data source:</b><br>
+      Fitbit step count data
+    "),
+    admin = HTML("
+      <b>What this shows:</b><br>
+      The study day with the highest total or average step count
+      across the selected range.<br><br>
+      <b>Data source:</b><br>
+      steps_intraday_5m.csv<br><br>
+      <b>All Participants mode:</b><br>
+      The study day with the highest cohort-average step count.
+    ")
+  ),
+  
+  insight_bedtime_card = list(
+    user = HTML("
+      <b>What this shows:</b><br>
+      Your typical bedtime — the average time you fell asleep
+      across all nights in the selected range.<br><br>
+      <b>Data source:</b><br>
+      Fitbit sleep onset time data<br><br>
+      <b>Note:</b><br>
+      Times after midnight are treated as early morning
+      to calculate the average correctly.
+    "),
+    admin = HTML("
+      <b>What this shows:</b><br>
+      Average sleep onset time across the selected range.<br><br>
+      <b>Data source:</b><br>
+      sleep_minute.csv (earliest datetime per sleep session)<br><br>
+      <b>All Participants mode:</b><br>
+      Average bedtime across all participants combined.
+      The (avg) suffix is appended to the displayed time.
+    ")
+  ),
   
   # ============================================================
   # DATA VIEW TAB (admin-only)
@@ -647,6 +803,70 @@ chart_card_ui <- function(chart_id, title, output_fn, is_admin = FALSE, extra_ui
       div(id = body_id,
           extra_ui,
           output_fn(chart_id, ...)
+      )
+  )
+}
+
+# ------------------------------------------------------------------------------
+# metric_card_ui()
+# ------------------------------------------------------------------------------
+#' Build a collapsible metric card with eye toggle and info popover.
+#' Mirrors chart_card_ui() but sized for KPI/insight cards.
+#'
+#' @param card_id Unique string ID for this card.
+#' @param label ALL-CAPS label shown above the value.
+#' @param output_id The textOutput ID for the metric value.
+#' @param unit Small unit label shown below the value (e.g. "bpm").
+#' @param is_admin Logical. Controls default hidden state and popover content.
+#' @param value_size "large" (h2) for Overview KPIs, "medium" (h3) for Insights.
+#'
+#' @return A div containing the full metric card.
+metric_card_ui <- function(card_id, label, output_id, unit = NULL,
+                           is_admin = FALSE, value_size = "large") {
+  
+  value_tag <- if (value_size == "large") {
+    h2(textOutput(output_id), class = "metric-value")
+  } else {
+    h3(textOutput(output_id), class = "metric-value")
+  }
+  
+  info_entry <- CHART_INFO[[card_id]]
+  if (is.null(info_entry)) {
+    info_content <- HTML("<i>No description available.</i>")
+  } else if (is.list(info_entry)) {
+    info_content <- if (isTRUE(is_admin)) info_entry$admin else info_entry$user
+  } else {
+    info_content <- info_entry
+  }
+  
+  div(class = "metric-card",
+      style = "position: relative;",
+      
+      # Icons in top-right corner — stacked vertically
+      div(style = "position: absolute; top: 6px; right: 8px; display: flex; flex-direction: column; gap: 4px; align-items: center;",
+          uiOutput(paste0(card_id, "_toggle_ui"), inline = TRUE),
+          popover(
+            span(
+              bsicons::bs_icon("info-circle"),
+              class = "chart-info-trigger",
+              style = "font-size: 0.7rem;"
+            ),
+            title = "About This Metric",
+            info_content,
+            placement = "left"
+          )
+      ),
+      
+      # Card content
+      p(label, class = "metric-label"),
+      div(id = paste0(card_id, "_value"),
+          value_tag,
+          if (!is.null(unit)) p(unit, class = "metric-unit")
+      ),
+      div(id = paste0(card_id, "_hidden"),
+          style = "display: none;",
+          h2("Hidden", class = "metric-value",
+             style = "color: #ccc; font-style: italic; font-size: 1.2rem;")
       )
   )
 }
