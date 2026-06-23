@@ -1825,17 +1825,28 @@ server <- function(input, output, session) {
     }
     
     if (input$view_mode == "day") {
-      sleep_dur <- df %>%
-        filter(sleep_stage %in% c("deep", "rem", "light", "wake")) %>%
-        group_by(study_day) %>%
-        summarise(total_minutes = n(), .groups = "drop")
+      is_all <- auth$is_admin && is.null(current_participant())
+      
+      if (is_all) {
+        sleep_dur <- df %>%
+          filter(sleep_stage %in% c("deep", "rem", "light", "wake")) %>%
+          group_by(participantID, study_day) %>%
+          summarise(total_minutes = n(), .groups = "drop") %>%
+          group_by(study_day) %>%
+          summarise(total_minutes = mean(total_minutes, na.rm = TRUE), .groups = "drop")
+      } else {
+        sleep_dur <- df %>%
+          filter(sleep_stage %in% c("deep", "rem", "light", "wake")) %>%
+          group_by(study_day) %>%
+          summarise(total_minutes = n(), .groups = "drop")
+      }
       
       p <- ggplot(sleep_dur, aes(x = study_day, y = total_minutes)) +
         geom_col(fill = clr$deep, width = 0.7, alpha = 0.85) +
-        #geom_point(color = clr$deep, size = 2.5) +
         scale_x_continuous(breaks = scales::pretty_breaks()) +
         scale_y_continuous(breaks = scales::pretty_breaks()) +
-        labs(x = "Study Day", y = "Minutes") +
+        labs(x = "Study Day",
+             y = if (is_all) "Avg minutes (all participants)" else "Minutes") +
         dash_theme()
     } else {
       sleep_dur <- df %>%
@@ -1858,7 +1869,7 @@ server <- function(input, output, session) {
     
     ggplotly(p) %>%
       layout(hoverlabel = list(bgcolor = clr$bg),
-             margin = list(l = 50, r = 20, t = 20, b = 40))
+             margin = list(l = 50, r = 20, t = 20, b = 60))
   })
   
   # Sleep Stage
@@ -1881,6 +1892,8 @@ server <- function(input, output, session) {
       return(create_empty_plot("No sleep stage data available"))
     }
     
+    is_all <- auth$is_admin && is.null(current_participant())
+    
     plot_ly(
       data = stage_dist, labels = ~sleep_stage, values = ~minutes,
       type = "pie", hole = 0.6,
@@ -1890,10 +1903,13 @@ server <- function(input, output, session) {
                                Light = clr$light, Wake = clr$wake)[stage_dist$sleep_stage])
     ) %>%
       layout(
+        title = if (is_all) list(text = "All Participants Combined", 
+                                 font = list(size = 11, color = clr$text_secondary)) 
+        else NULL,
         showlegend = TRUE,
         legend = list(orientation = "h", yanchor = "bottom", y = -0.2,
                       xanchor = "center", x = 0.5),
-        margin = list(l = 20, r = 20, t = 20, b = 20)
+        margin = list(l = 20, r = 20, t = 30, b = 20)
       )
   })
   
@@ -1906,6 +1922,8 @@ server <- function(input, output, session) {
     }
     
     if (input$view_mode == "day") {
+      is_all <- auth$is_admin && is.null(current_participant())
+      
       d <- df %>%
         filter(!is.na(study_day)) %>%
         select(study_day, full_sleep_breathing_rate, deep_sleep_breathing_rate,
@@ -1918,6 +1936,12 @@ server <- function(input, output, session) {
                               light_sleep_breathing_rate = "Light",
                               rem_sleep_breathing_rate = "REM"))
       
+      if (is_all) {
+        d <- d %>%
+          group_by(study_day, stage) %>%
+          summarise(bpm = mean(bpm, na.rm = TRUE), .groups = "drop")
+      }
+      
       p <- ggplot(d, aes(x = study_day, y = bpm, color = stage, group = stage)) +
         geom_line(linewidth = 0.8) +
         geom_point(size = 2) +
@@ -1926,7 +1950,9 @@ server <- function(input, output, session) {
           Light = clr$light, REM = clr$rem)) +
         scale_x_continuous(breaks = scales::pretty_breaks()) +
         scale_y_continuous(breaks = scales::pretty_breaks()) +
-        labs(x = "Study Day", y = "breaths/min") +
+        labs(x = "Study Day",
+             y = if (is_all) "Avg breaths/min (all participants)" else "breaths/min",
+             color = "Sleep Stage") +
         dash_theme()
     } else {
       d <- df %>%
@@ -1955,7 +1981,9 @@ server <- function(input, output, session) {
     
     ggplotly(p) %>%
       layout(hoverlabel = list(bgcolor = clr$bg),
-             margin = list(l = 50, r = 20, t = 20, b = 40))
+             legend = list(orientation = "h", xanchor = "center",
+                           x = 0.5, y = -0.5, title = list(text = "")),
+             margin = list(l = 50, r = 20, t = 20, b = 80))
   })
   
   # Populate hypnogram night dropdown
@@ -1969,6 +1997,54 @@ server <- function(input, output, session) {
   output$hypnogram_chart <- renderPlotly({
     req(auth$logged_in)
     df <- sleep_data()
+    is_all <- auth$is_admin && is.null(current_participant())
+    
+    if (is_all) {
+      # All Participants: stacked bar of avg sleep stage minutes per study day
+      if (is.null(df) || nrow(df) == 0) {
+        return(create_empty_plot("No sleep data available"))
+      }
+      
+      has_study_day <- "study_day" %in% names(df)
+      if (!has_study_day) {
+        return(create_empty_plot("Study day data not available"))
+      }
+      
+      sleep_summary <- df %>%
+        filter(sleep_stage %in% c("deep", "rem", "light", "wake", "asleep")) %>%
+        mutate(sleep_stage = case_when(
+          tolower(sleep_stage) %in% c("deep") ~ "Deep",
+          tolower(sleep_stage) %in% c("rem") ~ "REM",
+          tolower(sleep_stage) %in% c("light", "asleep") ~ "Light",
+          tolower(sleep_stage) %in% c("wake") ~ "Wake",
+          TRUE ~ "Light"
+        )) %>%
+        filter(sleep_stage != "Wake") %>%
+        group_by(participantID, study_day, sleep_stage) %>%
+        summarise(minutes = n(), .groups = "drop") %>%
+        group_by(study_day, sleep_stage) %>%
+        summarise(minutes = mean(minutes, na.rm = TRUE), .groups = "drop")
+      
+      if (nrow(sleep_summary) == 0) {
+        return(create_empty_plot("No sleep stage data available"))
+      }
+      
+      p <- ggplot(sleep_summary, aes(x = study_day, y = minutes, fill = sleep_stage)) +
+        geom_col(width = 0.7, alpha = 0.9) +
+        scale_fill_manual(values = c(Deep = clr$deep, REM = clr$rem, Light = clr$light)) +
+        labs(x = "Study Day", y = "Avg minutes (all participants)",
+             fill = "Sleep Stage") +
+        scale_x_continuous(breaks = scales::pretty_breaks()) +
+        dash_theme()
+      
+      return(ggplotly(p) %>%
+               layout(hoverlabel = list(bgcolor = clr$bg),
+                      legend = list(orientation = "h", xanchor = "center",
+                                    x = 0.5, y = -0.5, title = list(text = "")),
+                      margin = list(l = 50, r = 20, t = 20, b = 80)))
+    }
+    
+    # Individual participant: normal hypnogram
     req(input$hypnogram_date)
     if (is.null(df) || nrow(df) == 0) {
       return(create_empty_plot("No sleep data available"))
@@ -2033,12 +2109,25 @@ server <- function(input, output, session) {
     }
     
     if (input$view_mode == "day") {
-      eff <- df %>%
-        group_by(study_day) %>%
-        summarise(
-          efficiency = round(sum(sleep_stage != "wake") / n() * 100, 1),
-          .groups = "drop"
-        )
+      is_all <- auth$is_admin && is.null(current_participant())
+      
+      if (is_all) {
+        eff <- df %>%
+          group_by(participantID, study_day) %>%
+          summarise(
+            efficiency = round(sum(sleep_stage != "wake") / n() * 100, 1),
+            .groups = "drop"
+          ) %>%
+          group_by(study_day) %>%
+          summarise(efficiency = mean(efficiency, na.rm = TRUE), .groups = "drop")
+      } else {
+        eff <- df %>%
+          group_by(study_day) %>%
+          summarise(
+            efficiency = round(sum(sleep_stage != "wake") / n() * 100, 1),
+            .groups = "drop"
+          )
+      }
       
       p <- ggplot(eff, aes(x = study_day, y = efficiency)) +
         geom_line(color = clr$steps, linewidth = 1) +
@@ -2046,12 +2135,13 @@ server <- function(input, output, session) {
         geom_hline(yintercept = 85, linetype = "dashed", color = clr$target_line) +
         scale_x_continuous(breaks = scales::pretty_breaks()) +
         scale_y_continuous(breaks = scales::pretty_breaks()) +
-        labs(x = "Study Day", y = "Efficiency (%)") +
+        labs(x = "Study Day",
+             y = if (is_all) "Avg Efficiency % (all participants)" else "Efficiency (%)") +
         dash_theme()
       
       ggplotly(p) %>%
         layout(hoverlabel = list(bgcolor = clr$bg),
-               margin = list(l = 50, r = 20, t = 20, b = 40))
+               margin = list(l = 50, r = 20, t = 20, b = 60))
     } else {
       eff <- df %>%
         group_by(dateOfSleep) %>%
