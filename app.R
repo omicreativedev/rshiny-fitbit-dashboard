@@ -2186,14 +2186,34 @@ server <- function(input, output, session) {
     }
     
     if (input$view_mode == "day") {
-      chart_data <- df %>%
-        group_by(study_day) %>%
-        summarise(
-          fat_burn = sum(fat_burn_minutes, na.rm = TRUE),
-          cardio   = sum(cardio_minutes,   na.rm = TRUE),
-          peak     = sum(peak_minutes,     na.rm = TRUE),
-          .groups  = "drop"
-        )
+      is_all <- auth$is_admin && is.null(current_participant())
+      
+      chart_data <- if (is_all) {
+        df %>%
+          group_by(participantID, study_day) %>%
+          summarise(
+            fat_burn = sum(fat_burn_minutes, na.rm = TRUE),
+            cardio   = sum(cardio_minutes,   na.rm = TRUE),
+            peak     = sum(peak_minutes,     na.rm = TRUE),
+            .groups  = "drop"
+          ) %>%
+          group_by(study_day) %>%
+          summarise(
+            fat_burn = mean(fat_burn, na.rm = TRUE),
+            cardio   = mean(cardio,   na.rm = TRUE),
+            peak     = mean(peak,     na.rm = TRUE),
+            .groups  = "drop"
+          )
+      } else {
+        df %>%
+          group_by(study_day) %>%
+          summarise(
+            fat_burn = sum(fat_burn_minutes, na.rm = TRUE),
+            cardio   = sum(cardio_minutes,   na.rm = TRUE),
+            peak     = sum(peak_minutes,     na.rm = TRUE),
+            .groups  = "drop"
+          )
+      }
       
       plot_ly() %>%
         add_bars(data = chart_data, x = ~study_day, y = ~fat_burn,
@@ -2205,8 +2225,9 @@ server <- function(input, output, session) {
         layout(
           barmode = "stack",
           xaxis = list(title = "Study Day"),
-          yaxis = list(title = "Minutes"),
-          legend = list(orientation = "h", xanchor = "center", x = 0.5, yanchor = "top", y = -0.2),
+          yaxis = list(title = if (is_all) "Avg Minutes (all participants)" else "Minutes"),
+          legend = list(orientation = "h", xanchor = "center", x = 0.5,
+                        yanchor = "top", y = -0.2, title = list(text = "")),
           hoverlabel = list(bgcolor = clr$bg),
           margin = list(l = 50, r = 20, t = 20, b = 60)
         )
@@ -2283,25 +2304,31 @@ server <- function(input, output, session) {
     
     has_type <- "exercise_type" %in% names(d)
     
+    is_all <- auth$is_admin && is.null(current_participant())
+    
     if (has_type) {
       d <- d %>%
         mutate(
-          activity_type = tolower(trimws(exercise_type)),  # map exercise_type to activity_type
+          activity_type = tolower(trimws(exercise_type)),
           activity_label = ifelse(activity_type %in% names(activity_color_map),
                                   activity_type, "other"),
           point_color   = ifelse(activity_type %in% names(activity_color_map),
                                  activity_color_map[activity_type],
                                  clr$steps),
-          hover_text    = paste0("Type: ", activity_type,
-                                 "<br>Duration: ", round(duration_min), " min",
-                                 "<br>Date: ", format(date, "%b %d"))
+          hover_text    = paste0(
+            if (is_all) paste0("Participant: ", participantID, "<br>") else "",
+            "Type: ", activity_type,
+            "<br>Duration: ", round(duration_min), " min",
+            "<br>Date: ", format(date, "%b %d"))
         )
     } else {
       d <- d %>%
         mutate(
           point_color = clr$steps,
-          hover_text  = paste0("Duration: ", round(duration_min), " min",
-                               "<br>Date: ", format(date, "%b %d"))
+          hover_text  = paste0(
+            if (is_all) paste0("Participant: ", participantID, "<br>") else "",
+            "Duration: ", round(duration_min), " min",
+            "<br>Date: ", format(date, "%b %d"))
         )
     }
     
@@ -2353,16 +2380,28 @@ server <- function(input, output, session) {
       mutate(date = as.Date(period_start))
     
     if (input$view_mode == "day") {
-      daily_sedentary <- d %>%
-        filter(!is.na(study_day)) %>%
-        group_by(study_day) %>%
-        summarise(total_minutes = sum(duration_minutes, na.rm = TRUE), .groups = "drop")
+      is_all <- auth$is_admin && is.null(current_participant())
+      
+      if (is_all) {
+        daily_sedentary <- d %>%
+          filter(!is.na(study_day)) %>%
+          group_by(participantID, study_day) %>%
+          summarise(total_minutes = sum(duration_minutes, na.rm = TRUE), .groups = "drop") %>%
+          group_by(study_day) %>%
+          summarise(total_minutes = mean(total_minutes, na.rm = TRUE), .groups = "drop")
+      } else {
+        daily_sedentary <- d %>%
+          filter(!is.na(study_day)) %>%
+          group_by(study_day) %>%
+          summarise(total_minutes = sum(duration_minutes, na.rm = TRUE), .groups = "drop")
+      }
       
       p <- ggplot(daily_sedentary, aes(x = study_day, y = total_minutes)) +
         geom_col(fill = clr$green, alpha = 0.85, width = 0.65) +
         scale_x_continuous(breaks = scales::pretty_breaks()) +
         scale_y_continuous(breaks = scales::pretty_breaks()) +
-        labs(x = "Study Day", y = "Minutes Sedentary") +
+        labs(x = "Study Day",
+             y = if (is_all) "Avg Minutes Sedentary (all participants)" else "Minutes Sedentary") +
         dash_theme()
     } else {
       daily_sedentary <- d %>%
@@ -2397,9 +2436,19 @@ server <- function(input, output, session) {
     }
     
     if (input$view_mode == "day") {
-      daily <- df %>%
-        group_by(study_day) %>%
-        summarise(total = sum(steps_5min, na.rm = TRUE), .groups = "drop")
+      is_all <- auth$is_admin && is.null(current_participant())
+      
+      if (is_all) {
+        daily <- df %>%
+          group_by(participantID, study_day) %>%
+          summarise(total = sum(steps_5min, na.rm = TRUE), .groups = "drop") %>%
+          group_by(study_day) %>%
+          summarise(total = mean(total, na.rm = TRUE), .groups = "drop")
+      } else {
+        daily <- df %>%
+          group_by(study_day) %>%
+          summarise(total = sum(steps_5min, na.rm = TRUE), .groups = "drop")
+      }
       
       p <- ggplot(daily, aes(x = study_day, y = total)) +
         geom_col(fill = clr$steps, width = 0.7, alpha = 0.9) +
@@ -2408,7 +2457,8 @@ server <- function(input, output, session) {
         scale_x_continuous(breaks = scales::pretty_breaks()) +
         scale_y_continuous(labels = scales::comma,
                            breaks = scales::pretty_breaks()) +
-        labs(x = "Study Day", y = "Steps") +
+        labs(x = "Study Day",
+             y = if (is_all) "Avg Steps (all participants)" else "Steps") +
         dash_theme()
     } else {
       daily <- df %>%
@@ -2443,21 +2493,41 @@ server <- function(input, output, session) {
     }
     
     if (input$view_mode == "day") {
-      hourly <- df %>%
-        filter(!is.na(study_day)) %>%
-        mutate(hour = hour(datetime)) %>%
-        group_by(study_day, hour) %>%
-        summarise(avg = mean(steps_5min, na.rm = TRUE), .groups = "drop")
+      is_all <- auth$is_admin && is.null(current_participant())
       
-      p <- ggplot(hourly, aes(x = hour, y = avg,
-                              color = factor(study_day),
-                              group = factor(study_day))) +
-        geom_line(linewidth = 0.8, alpha = 0.8) +
-        scale_x_continuous(breaks = c(0, 6, 12, 18, 23),
-                           labels = c("12am", "6am", "12pm", "6pm", "11pm")) +
-        scale_y_continuous(breaks = scales::pretty_breaks()) +
-        labs(x = "Hour of Day", y = "Avg Steps", color = "Study Day") +
-        dash_theme()
+      if (is_all) {
+        hourly <- df %>%
+          filter(!is.na(study_day)) %>%
+          mutate(hour = hour(datetime)) %>%
+          group_by(participantID, hour) %>%
+          summarise(avg = mean(steps_5min, na.rm = TRUE), .groups = "drop")
+        
+        p <- ggplot(hourly, aes(x = hour, y = avg,
+                                color = participantID,
+                                group = participantID)) +
+          geom_line(linewidth = 0.8, alpha = 0.8) +
+          scale_x_continuous(breaks = c(0, 6, 12, 18, 23),
+                             labels = c("12am", "6am", "12pm", "6pm", "11pm")) +
+          scale_y_continuous(breaks = scales::pretty_breaks()) +
+          labs(x = "Hour of Day", y = "Avg Steps") +
+          dash_theme()
+      } else {
+        hourly <- df %>%
+          filter(!is.na(study_day)) %>%
+          mutate(hour = hour(datetime)) %>%
+          group_by(study_day, hour) %>%
+          summarise(avg = mean(steps_5min, na.rm = TRUE), .groups = "drop")
+        
+        p <- ggplot(hourly, aes(x = hour, y = avg,
+                                color = factor(study_day),
+                                group = factor(study_day))) +
+          geom_line(linewidth = 0.8, alpha = 0.8) +
+          scale_x_continuous(breaks = c(0, 6, 12, 18, 23),
+                             labels = c("12am", "6am", "12pm", "6pm", "11pm")) +
+          scale_y_continuous(breaks = scales::pretty_breaks()) +
+          labs(x = "Hour of Day", y = "Avg Steps", color = "Study Day") +
+          dash_theme()
+      }
     } else {
       hourly <- df %>%
         mutate(hour = hour(datetime)) %>%
@@ -2477,7 +2547,9 @@ server <- function(input, output, session) {
     
     ggplotly(p) %>%
       layout(hoverlabel = list(bgcolor = clr$bg),
-             margin = list(l = 50, r = 20, t = 20, b = 40))
+             legend = list(orientation = "h", xanchor = "center",
+                           x = 0.5, y = -0.5, title = list(text = "")),
+             margin = list(l = 50, r = 20, t = 20, b = 80))
   })
   
   #
@@ -2489,16 +2561,28 @@ server <- function(input, output, session) {
     }
     
     if (input$view_mode == "day") {
-      daily <- df %>%
-        filter(!is.na(study_day)) %>%
-        group_by(study_day) %>%
-        summarise(total = sum(distance_meters, na.rm = TRUE), .groups = "drop")
+      is_all <- auth$is_admin && is.null(current_participant())
+      
+      if (is_all) {
+        daily <- df %>%
+          filter(!is.na(study_day)) %>%
+          group_by(participantID, study_day) %>%
+          summarise(total = sum(distance_meters, na.rm = TRUE), .groups = "drop") %>%
+          group_by(study_day) %>%
+          summarise(total = mean(total, na.rm = TRUE), .groups = "drop")
+      } else {
+        daily <- df %>%
+          filter(!is.na(study_day)) %>%
+          group_by(study_day) %>%
+          summarise(total = sum(distance_meters, na.rm = TRUE), .groups = "drop")
+      }
       
       p <- ggplot(daily, aes(x = study_day, y = total)) +
         geom_col(fill = clr$calories, width = 0.65, alpha = 0.85) +
         scale_x_continuous(breaks = scales::pretty_breaks()) +
         scale_y_continuous(breaks = scales::pretty_breaks()) +
-        labs(x = "Study Day", y = "Meters") +
+        labs(x = "Study Day",
+             y = if (is_all) "Avg Meters (all participants)" else "Meters") +
         dash_theme()
     } else {
       daily <- df %>%
@@ -2527,15 +2611,29 @@ server <- function(input, output, session) {
     req(auth$logged_in)
     df <- daily_metrics()
     if (is.null(df) || nrow(df) == 0) return("—")
-    v <- df %>%
-      filter(!is.na(total_sleep_minutes)) %>%
-      arrange(desc(total_sleep_minutes)) %>%
-      head(1)
-    if (nrow(v) == 0) return("—")
-    if (input$view_mode == "day") {
-      paste0("Day ", v$study_day, " — ", v$total_sleep_minutes, " min")
+    is_all <- auth$is_admin && is.null(current_participant())
+    
+    if (is_all) {
+      v <- df %>%
+        filter(!is.na(total_sleep_minutes)) %>%
+        group_by(study_day) %>%
+        summarise(total_sleep_minutes = mean(total_sleep_minutes, na.rm = TRUE),
+                  .groups = "drop") %>%
+        arrange(desc(total_sleep_minutes)) %>%
+        head(1)
+      if (nrow(v) == 0) return("—")
+      paste0("Day ", v$study_day, " — ", round(v$total_sleep_minutes), " min avg")
     } else {
-      paste0(format(as.Date(v$date), "%b %d"), " — ", v$total_sleep_minutes, " min")
+      v <- df %>%
+        filter(!is.na(total_sleep_minutes)) %>%
+        arrange(desc(total_sleep_minutes)) %>%
+        head(1)
+      if (nrow(v) == 0) return("—")
+      if (input$view_mode == "day") {
+        paste0("Day ", v$study_day, " — ", v$total_sleep_minutes, " min")
+      } else {
+        paste0(format(as.Date(v$date), "%b %d"), " — ", v$total_sleep_minutes, " min")
+      }
     }
   })
   
@@ -2543,24 +2641,37 @@ server <- function(input, output, session) {
     req(auth$logged_in)
     df <- steps_data()
     if (is.null(df) || nrow(df) == 0) return("—")
+    is_all <- auth$is_admin && is.null(current_participant())
     
-    if (input$view_mode == "day") {
+    if (is_all) {
       daily <- df %>%
+        group_by(participantID, study_day) %>%
+        summarise(total = sum(steps_5min, na.rm = TRUE), .groups = "drop") %>%
         group_by(study_day) %>%
-        summarise(total = sum(steps_5min, na.rm = TRUE), .groups = "drop") %>%
+        summarise(total = mean(total, na.rm = TRUE), .groups = "drop") %>%
         arrange(desc(total)) %>%
         head(1)
       if (nrow(daily) == 0) return("—")
-      paste0("Day ", daily$study_day, " — ", format(daily$total, big.mark = ","), " steps")
+      paste0("Day ", daily$study_day, " — ", format(round(daily$total), big.mark = ","), " avg steps")
     } else {
-      daily <- df %>%
-        mutate(date = as.Date(date)) %>%
-        group_by(date) %>%
-        summarise(total = sum(steps_5min, na.rm = TRUE), .groups = "drop") %>%
-        arrange(desc(total)) %>%
-        head(1)
-      if (nrow(daily) == 0) return("—")
-      paste0(format(daily$date, "%b %d"), " — ", format(daily$total, big.mark = ","), " steps")
+      if (input$view_mode == "day") {
+        daily <- df %>%
+          group_by(study_day) %>%
+          summarise(total = sum(steps_5min, na.rm = TRUE), .groups = "drop") %>%
+          arrange(desc(total)) %>%
+          head(1)
+        if (nrow(daily) == 0) return("—")
+        paste0("Day ", daily$study_day, " — ", format(daily$total, big.mark = ","), " steps")
+      } else {
+        daily <- df %>%
+          mutate(date = as.Date(date)) %>%
+          group_by(date) %>%
+          summarise(total = sum(steps_5min, na.rm = TRUE), .groups = "drop") %>%
+          arrange(desc(total)) %>%
+          head(1)
+        if (nrow(daily) == 0) return("—")
+        paste0(format(daily$date, "%b %d"), " — ", format(daily$total, big.mark = ","), " steps")
+      }
     }
   })
   
@@ -2580,7 +2691,9 @@ server <- function(input, output, session) {
       )
     if (nrow(bedtimes) == 0) return("—")
     avg_hr <- mean(bedtimes$hour_dec, na.rm = TRUE) %% 24
-    sprintf("%02d:%02d", floor(avg_hr), round((avg_hr %% 1) * 60))
+    is_all <- auth$is_admin && is.null(current_participant())
+    suffix <- if (is_all) " (avg)" else ""
+    paste0(sprintf("%02d:%02d", floor(avg_hr), round((avg_hr %% 1) * 60)), suffix)
   })
   
   # ANALYSIS TAB
@@ -2635,7 +2748,9 @@ server <- function(input, output, session) {
     
     ggplotly(p, tooltip = c("x", "y", "colour")) %>%
       layout(hoverlabel = list(bgcolor = clr$bg),
-             margin = list(l = 50, r = 20, t = 20, b = 40))
+             legend = list(orientation = "h", xanchor = "center",
+                           x = 0.5, y = -0.5, title = list(text = "")),
+             margin = list(l = 50, r = 20, t = 20, b = 80))
   })
   
   output$admin_steps_comparison <- renderPlotly({
@@ -2681,7 +2796,9 @@ server <- function(input, output, session) {
     
     ggplotly(p, tooltip = c("x", "y", "fill")) %>%
       layout(hoverlabel = list(bgcolor = clr$bg),
-             margin = list(l = 50, r = 20, t = 20, b = 40))
+             legend = list(orientation = "h", xanchor = "center",
+                           x = 0.5, y = -0.5, title = list(text = "")),
+             margin = list(l = 50, r = 20, t = 20, b = 80))
   })
   
   output$admin_completeness_heatmap <- renderPlotly({
