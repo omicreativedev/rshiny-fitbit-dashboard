@@ -1,25 +1,210 @@
 # ==============================================================================
 # R/chart_card.R
+# Simmons University Fitbit Research Dashboard
+# STARS Program / Boston University Labs
 # ==============================================================================
-# Reusable wrapper for every chart card in the dashboard. Provides:
-#   - A collapse/expand toggle (eye / eye-slash-fill icon)
-#   - An info popover (info-circle icon) with chart-specific explanatory
-#     text, defined in CHART_INFO below
-#   - A consistent card header layout (title left, icons right)
 #
-# CHART_INFO entries can be either:
-#   - A single HTML() value (same content for users and admins)
-#   - A list(user = HTML(...), admin = HTML(...)) for role-specific content
+# PURPOSE
+# -------
+# This file provides two reusable UI components used throughout the dashboard:
 #
-# chart_card_ui() selects the correct content based on is_admin.
+#   1. chart_card_ui()  — wraps every Plotly/DT chart in a collapsible card
+#                         with a title, eye toggle, and info popover.
+#
+#   2. metric_card_ui() — wraps every KPI/insight text metric in a card
+#                         with an eye toggle and info popover.
+#
+# It also defines CHART_INFO, a named list of popover content for every
+# chart and metric card in the app. Entries support either:
+#   - A single HTML() value (shown to both users and admins), or
+#   - A list(user = HTML(...), admin = HTML(...)) for role-specific content.
+#
+# The correct version is selected at render time by chart_card_ui() and
+# metric_card_ui() based on the is_admin argument.
+#
+#
+# SERVER-SIDE WIRING (in app.R)
+# ------------------------------
+# chart_card_ui() builds the static HTML shell only. All reactive behavior
+# (collapse/expand toggling) is wired in app.R via two helpers:
+#
+#   init_chart_card(chart_id, is_admin)
+#     — Seeds collapse state, renders the eye icon, registers the click handler.
+#     — Must be called once per chart_id inside the relevant tab content function.
+#
+#   init_metric_card(card_id, is_admin)
+#     — Same pattern as above but for metric cards (show/hide value vs "Hidden").
+#     — Must be called once per card_id inside the relevant tab content function.
+#
+# Both functions are safe to call multiple times — a deduplication guard
+# (chart_observers_registered) prevents duplicate observer registration.
+#
+#
+# ADDING A NEW CHART OR METRIC CARD
+# -----------------------------------
+# 1. Add a CHART_INFO entry below (single HTML or list(user=, admin=)).
+# 2. Call chart_card_ui() or metric_card_ui() in the appropriate tab content
+#    function in app.R.
+# 3. Call init_chart_card() or init_metric_card() at the top of that same
+#    tab content function.
+# 4. Add the render block (output$chart_id <- renderPlotly({...})) in app.R.
+#
+# ==============================================================================
+
+
+# ==============================================================================
+# CHART_INFO
+# ==============================================================================
+# Popover content for every chart and metric card, keyed by chart_id / card_id.
+# Organized in tab order (top-down, left-to-right within each tab) matching
+# the dashboard layout:
+#
+#   Overview tab:
+#     KPI cards: kpi_hr, kpi_steps, kpi_sleep, kpi_spo2
+#     Charts:    plot_hr, plot_steps, plot_sleep
+#
+#   Heart Rate tab:
+#     Charts:    hr_timeseries, hr_distribution, hr_by_hour, hrv_chart
+#
+#   Sleep tab:
+#     Charts:    sleep_duration, sleep_stage_pie, breathing_rate_chart,
+#                hypnogram_chart, sleep_efficiency_chart
+#
+#   Activity tab:
+#     Charts:    zone_minutes_chart, exercise_sessions_chart, sedentary_chart,
+#                activity_steps_chart, activity_steps_by_hour,
+#                activity_distance_chart
+#
+#   Insights tab:
+#     Metric cards: insight_best_sleep_card, insight_most_active_card,
+#                   insight_bedtime_card
+#     Charts:       weekday_sleep_chart, weekday_steps_chart,
+#                   weekday_hrv_chart (admin only), weekday_hr_chart (admin only)
+#
+#   Projections tab:
+#     Charts:    hrv_sleep_chart
+#
+#   Analysis tab (admin only):
+#     Charts:    admin_hr_comparison, admin_steps_comparison,
+#                admin_completeness_heatmap, admin_summary_table
+#
+#   Data View tab (admin only):
+#     Charts:    data_view_table
+#
 # ==============================================================================
 
 CHART_INFO <- list(
   
-  # ============================================================
-  # OVERVIEW TAB
-  # ============================================================
   
+  # ============================================================================
+  # OVERVIEW TAB — KPI METRIC CARDS
+  # Four summary cards shown at the top of the Overview tab.
+  # Shown to all users; hidden by default for admins (value replaced by
+  # "Hidden" until the admin clicks the eye icon to reveal).
+  # ============================================================================
+  
+  # Average heart rate across all 5-minute readings in the selected range.
+  kpi_hr = list(
+    user = HTML("
+      <b>What this shows:</b><br>
+      Your average heart rate across all readings in the selected range,
+      measured in beats per minute (bpm).<br><br>
+      <b>Data source:</b><br>
+      Fitbit 5-minute heart rate readings<br><br>
+      <b>Note:</b><br>
+      A typical resting heart rate for adults is 60–100 bpm.
+      Lower resting HR often indicates better cardiovascular fitness.
+    "),
+    admin = HTML("
+      <b>What this shows:</b><br>
+      Mean heart rate across all 5-minute interval readings
+      in the selected range, in bpm.<br><br>
+      <b>Data source:</b><br>
+      hr_intraday_5m.csv<br><br>
+      <b>Filters:</b><br>
+      Values between 30–220 bpm only.<br><br>
+      <b>All Participants mode:</b><br>
+      Average across all participants' readings combined.
+    ")
+  ),
+  
+  # Average daily step total across the selected range.
+  kpi_steps = list(
+    user = HTML("
+      <b>What this shows:</b><br>
+      Your average daily step count across the selected range.<br><br>
+      <b>Data source:</b><br>
+      Fitbit step count data<br><br>
+      <b>Note:</b><br>
+      The commonly cited goal is 10,000 steps per day,
+      though research suggests benefits begin at lower counts.
+    "),
+    admin = HTML("
+      <b>What this shows:</b><br>
+      Mean daily step total across the selected range.<br><br>
+      <b>Data source:</b><br>
+      steps_intraday_5m.csv<br><br>
+      <b>All Participants mode:</b><br>
+      Average daily steps across all participants combined.
+    ")
+  ),
+  
+  # Average nightly deep sleep duration in minutes.
+  kpi_sleep = list(
+    user = HTML("
+      <b>What this shows:</b><br>
+      Your average nightly deep sleep duration in minutes
+      across the selected range.<br><br>
+      <b>Data source:</b><br>
+      Fitbit sleep stage data<br><br>
+      <b>Note:</b><br>
+      Deep sleep is the most restorative stage. Adults typically
+      get 1–2 hours of deep sleep per night (roughly 13–23% of
+      total sleep time).
+    "),
+    admin = HTML("
+      <b>What this shows:</b><br>
+      Mean nightly deep sleep minutes across the selected range.<br><br>
+      <b>Data source:</b><br>
+      sleep_minute.csv (sleep_stage == 'deep')<br><br>
+      <b>All Participants mode:</b><br>
+      Average deep sleep minutes per night across all participants.
+    ")
+  ),
+  
+  # Average SpO2 (blood oxygen saturation) percentage.
+  kpi_spo2 = list(
+    user = HTML("
+      <b>What this shows:</b><br>
+      Your average blood oxygen saturation (SpO2) across the
+      selected range, as a percentage.<br><br>
+      <b>Data source:</b><br>
+      Fitbit SpO2 sensor data<br><br>
+      <b>Note:</b><br>
+      Normal SpO2 is typically 95–100%. Values below 90%
+      may warrant medical attention.
+    "),
+    admin = HTML("
+      <b>What this shows:</b><br>
+      Mean SpO2 percentage across the selected range.<br><br>
+      <b>Data source:</b><br>
+      spo2_intraday.csv<br><br>
+      <b>Filters:</b><br>
+      Values between 70–100% only.<br><br>
+      <b>All Participants mode:</b><br>
+      Average SpO2 across all participants' readings combined.
+    ")
+  ),
+  
+  
+  # ============================================================================
+  # OVERVIEW TAB — CHARTS
+  # Three charts shown below the KPI cards on the Overview tab.
+  # Left column: plot_hr, plot_steps (side by side).
+  # Full width: plot_sleep.
+  # ============================================================================
+  
+  # Heart Rate Over Time — line chart of average HR by date or study day.
   plot_hr = list(
     user = HTML("
       <b>What this shows:</b><br>
@@ -43,6 +228,7 @@ CHART_INFO <- list(
     ")
   ),
   
+  # Daily Steps — bar chart of total steps per day with 10,000-step goal line.
   plot_steps = list(
     user = HTML("
       <b>What this shows:</b><br>
@@ -66,6 +252,7 @@ CHART_INFO <- list(
     ")
   ),
   
+  # Sleep Stage Breakdown — stacked bar of Deep/REM/Light minutes per night.
   plot_sleep = list(
     user = HTML("
       <b>What this shows:</b><br>
@@ -87,10 +274,16 @@ CHART_INFO <- list(
     ")
   ),
   
-  # ============================================================
-  # HEART RATE TAB
-  # ============================================================
   
+  # ============================================================================
+  # HEART RATE TAB — CHARTS
+  # Full width: hr_timeseries.
+  # Side by side: hr_distribution (left), hr_by_hour (right).
+  # Full width: hrv_chart (admin only).
+  # ============================================================================
+  
+  # Heart Rate Time Series — raw 5-min readings or study-day averages.
+  # Admins get Aggregate / Split by Participant toggle in All Participants mode.
   hr_timeseries = list(
     user = HTML("
       <b>What this shows:</b><br>
@@ -119,6 +312,8 @@ CHART_INFO <- list(
     ")
   ),
   
+  # Heart Rate Distribution — histogram of HR readings.
+  # In All Participants mode switches to density (y-axis) for comparability.
   hr_distribution = list(
     user = HTML("
       <b>What this shows:</b><br>
@@ -142,6 +337,8 @@ CHART_INFO <- list(
     ")
   ),
   
+  # Heart Rate by Hour of Day — reveals circadian rhythm patterns.
+  # Admins get Aggregate / Split by Participant toggle in All Participants mode.
   hr_by_hour = list(
     user = HTML("
       <b>What this shows:</b><br>
@@ -164,6 +361,8 @@ CHART_INFO <- list(
     ")
   ),
   
+  # Heart Rate Variability (HRV) — admin-only chart.
+  # Single HTML() entry since only admins ever see this chart.
   hrv_chart = HTML("
     <b>What this shows:</b><br>
     Heart rate variability (RMSSD), a marker of autonomic nervous system
@@ -179,10 +378,16 @@ CHART_INFO <- list(
     Cohort average RMSSD per study day (y-axis label updates accordingly).
   "),
   
-  # ============================================================
-  # SLEEP TAB
-  # ============================================================
   
+  # ============================================================================
+  # SLEEP TAB — CHARTS
+  # Side by side: sleep_duration (left), sleep_stage_pie (right).
+  # Full width:   breathing_rate_chart.
+  # Full width:   hypnogram_chart (with night selector dropdown).
+  # Full width:   sleep_efficiency_chart (with Aggregate/Split toggle for admins).
+  # ============================================================================
+  
+  # Sleep Duration Over Time — total sleep minutes per night.
   sleep_duration = list(
     user = HTML("
       <b>What this shows:</b><br>
@@ -204,6 +409,8 @@ CHART_INFO <- list(
     ")
   ),
   
+  # Sleep Stage Distribution — donut chart of proportional time per stage.
+  # In All Participants mode, combines all participants' minutes with a title note.
   sleep_stage_pie = list(
     user = HTML("
       <b>What this shows:</b><br>
@@ -224,6 +431,7 @@ CHART_INFO <- list(
     ")
   ),
   
+  # Breathing Rate During Sleep — lines per sleep stage plus full-sleep aggregate.
   breathing_rate_chart = list(
     user = HTML("
       <b>What this shows:</b><br>
@@ -246,6 +454,8 @@ CHART_INFO <- list(
     ")
   ),
   
+  # Hypnogram — timeline of sleep stage transitions for a single selected night.
+  # In All Participants mode shows a stacked bar chart instead (night selector hidden).
   hypnogram_chart = list(
     user = HTML("
       <b>What this shows:</b><br>
@@ -271,6 +481,8 @@ CHART_INFO <- list(
     ")
   ),
   
+  # Sleep Efficiency — % of time in bed actually spent asleep, with 85% target line.
+  # Admins get Aggregate / Split by Participant toggle in All Participants mode.
   sleep_efficiency_chart = list(
     user = HTML("
       <b>What this shows:</b><br>
@@ -294,10 +506,16 @@ CHART_INFO <- list(
     ")
   ),
   
-  # ============================================================
-  # ACTIVITY TAB
-  # ============================================================
   
+  # ============================================================================
+  # ACTIVITY TAB — CHARTS
+  # Side by side: zone_minutes_chart (left), exercise_sessions_chart (right).
+  # Full width:   sedentary_chart.
+  # Full width:   activity_steps_chart.
+  # Side by side: activity_steps_by_hour (left), activity_distance_chart (right).
+  # ============================================================================
+  
+  # Zone Minutes — stacked bar of Fat Burn / Cardio / Peak minutes per day.
   zone_minutes_chart = list(
     user = HTML("
       <b>What this shows:</b><br>
@@ -320,6 +538,8 @@ CHART_INFO <- list(
     ")
   ),
   
+  # Exercise Sessions — bubble chart of logged sessions sized by duration.
+  # Admins get By Activity Type / By Participant toggle in All Participants mode.
   exercise_sessions_chart = list(
     user = HTML("
       <b>What this shows:</b><br>
@@ -343,6 +563,7 @@ CHART_INFO <- list(
     ")
   ),
   
+  # Sedentary Periods — total minutes sedentary per day.
   sedentary_chart = list(
     user = HTML("
       <b>What this shows:</b><br>
@@ -365,6 +586,7 @@ CHART_INFO <- list(
     ")
   ),
   
+  # Daily Steps with Goal Line — same data as Overview plot_steps, more detailed view.
   activity_steps_chart = list(
     user = HTML("
       <b>What this shows:</b><br>
@@ -384,6 +606,8 @@ CHART_INFO <- list(
     ")
   ),
   
+  # Steps by Hour of Day — reveals when the participant is most active.
+  # In All Participants mode shows one line per participant.
   activity_steps_by_hour = list(
     user = HTML("
       <b>What this shows:</b><br>
@@ -406,6 +630,7 @@ CHART_INFO <- list(
     ")
   ),
   
+  # Distance per Day — total meters traveled per day.
   activity_distance_chart = list(
     user = HTML("
       <b>What this shows:</b><br>
@@ -428,10 +653,89 @@ CHART_INFO <- list(
     ")
   ),
   
-  # ============================================================
-  # INSIGHTS TAB — WEEKDAY VS WEEKEND
-  # ============================================================
   
+  # ============================================================================
+  # INSIGHTS TAB — METRIC CARDS
+  # Three summary cards at the top of the Insights tab.
+  # Shown to all users; hidden by default for admins.
+  # ============================================================================
+  
+  # Best Sleep Night — study day or date with the highest total sleep minutes.
+  insight_best_sleep_card = list(
+    user = HTML("
+      <b>What this shows:</b><br>
+      The single night with the highest total sleep duration
+      in your selected range, and how many minutes you slept.<br><br>
+      <b>Data source:</b><br>
+      Fitbit nightly sleep totals
+    "),
+    admin = HTML("
+      <b>What this shows:</b><br>
+      The study day with the highest average total sleep minutes
+      across the selected range.<br><br>
+      <b>Data source:</b><br>
+      daily_metrics.csv (total_sleep_minutes)<br><br>
+      <b>All Participants mode:</b><br>
+      The study day with the highest cohort-average sleep duration.
+    ")
+  ),
+  
+  # Most Active Day — day with the highest step count.
+  insight_most_active_card = list(
+    user = HTML("
+      <b>What this shows:</b><br>
+      The single day with the highest step count in your
+      selected range, and the total steps taken.<br><br>
+      <b>Data source:</b><br>
+      Fitbit step count data
+    "),
+    admin = HTML("
+      <b>What this shows:</b><br>
+      The study day with the highest total or average step count
+      across the selected range.<br><br>
+      <b>Data source:</b><br>
+      steps_intraday_5m.csv<br><br>
+      <b>All Participants mode:</b><br>
+      The study day with the highest cohort-average step count.
+    ")
+  ),
+  
+  # Typical Bedtime — average sleep onset time across all nights in the range.
+  insight_bedtime_card = list(
+    user = HTML("
+      <b>What this shows:</b><br>
+      Your typical bedtime — the average time you fell asleep
+      across all nights in the selected range.<br><br>
+      <b>Data source:</b><br>
+      Fitbit sleep onset time data<br><br>
+      <b>Note:</b><br>
+      Times after midnight are treated as early morning
+      to calculate the average correctly.
+    "),
+    admin = HTML("
+      <b>What this shows:</b><br>
+      Average sleep onset time across the selected range.<br><br>
+      <b>Data source:</b><br>
+      sleep_minute.csv (earliest datetime per sleep session)<br><br>
+      <b>All Participants mode:</b><br>
+      Average bedtime across all participants combined.
+      The (avg) suffix is appended to the displayed time.
+    ")
+  ),
+  
+  
+  # ============================================================================
+  # INSIGHTS TAB — WEEKDAY VS WEEKEND CHARTS
+  # Side by side: weekday_sleep_chart (left), weekday_steps_chart (right).
+  # Side by side (admin only): weekday_hrv_chart (left), weekday_hr_chart (right).
+  #
+  # The HRV and Resting HR charts are admin-only and use single HTML() entries
+  # since regular users never see them. They carry particular research relevance
+  # for the physiological stress study — lower weekday HRV and higher weekday
+  # resting HR are markers of sustained stress responses.
+  # ============================================================================
+  
+  # Sleep Duration: Weekday vs Weekend — avg sleep minutes by day type.
   weekday_sleep_chart = list(
     user = HTML("
       <b>What this shows:</b><br>
@@ -452,6 +756,7 @@ CHART_INFO <- list(
     ")
   ),
   
+  # Steps: Weekday vs Weekend — avg daily steps by day type.
   weekday_steps_chart = list(
     user = HTML("
       <b>What this shows:</b><br>
@@ -472,6 +777,7 @@ CHART_INFO <- list(
     ")
   ),
   
+  # HRV: Weekday vs Weekend — admin only. Key stress biomarker for the study.
   weekday_hrv_chart = HTML("
     <b>What this shows:</b><br>
     Average HRV (RMSSD) on weekdays vs weekends. Lower HRV on weekdays
@@ -484,6 +790,7 @@ CHART_INFO <- list(
     Cohort average RMSSD per day type across all participants.
   "),
   
+  # Resting HR: Weekday vs Weekend — admin only. Elevated weekday HR = stress marker.
   weekday_hr_chart = HTML("
     <b>What this shows:</b><br>
     Average resting heart rate on weekdays vs weekends. Elevated resting HR
@@ -496,10 +803,15 @@ CHART_INFO <- list(
     Cohort average resting HR per day type across all participants.
   "),
   
-  # ============================================================
-  # PROJECTIONS TAB
-  # ============================================================
   
+  # ============================================================================
+  # PROJECTIONS TAB — CHARTS
+  # Full width: hrv_sleep_chart.
+  # Visible to all users and admins.
+  # In All Participants mode, dots are colored by participant.
+  # ============================================================================
+  
+  # HRV vs Sleep Duration — scatter with linear regression line and r value.
   hrv_sleep_chart = list(
     user = HTML("
       <b>What this shows:</b><br>
@@ -531,10 +843,15 @@ CHART_INFO <- list(
     ")
   ),
   
-  # ============================================================
-  # ANALYSIS TAB (admin-only tab, single version sufficient)
-  # ============================================================
   
+  # ============================================================================
+  # ANALYSIS TAB — CHARTS (admin-only tab)
+  # All charts here use single HTML() entries since only admins see this tab.
+  # Full width: admin_hr_comparison, admin_steps_comparison,
+  #             admin_completeness_heatmap, admin_summary_table.
+  # ============================================================================
+  
+  # Multi-Participant Heart Rate Comparison — one line per participant.
   admin_hr_comparison = HTML("
     <b>What this shows:</b><br>
     Average heart rate per participant over time, aligned by study day
@@ -545,6 +862,7 @@ CHART_INFO <- list(
     Admin-only. Each line represents one participant.
   "),
   
+  # Multi-Participant Steps Comparison — side-by-side bars per participant.
   admin_steps_comparison = HTML("
     <b>What this shows:</b><br>
     Total daily steps per participant, displayed side by side for
@@ -555,6 +873,7 @@ CHART_INFO <- list(
     Admin-only. Each color represents one participant.
   "),
   
+  # Data Completeness Heatmap — shows which data sources are present per day.
   admin_completeness_heatmap = HTML("
     <b>What this shows:</b><br>
     Which data sources (heart rate, steps, sleep) are present for each
@@ -565,6 +884,7 @@ CHART_INFO <- list(
     Admin-only. Useful for identifying data gaps before analysis.
   "),
   
+  # Participant Activity Summary — DT table of per-participant metric averages.
   admin_summary_table = HTML("
     <b>What this shows:</b><br>
     Per-participant averages across the selected date range for:
@@ -574,167 +894,14 @@ CHART_INFO <- list(
     <b>Note:</b><br>
     Admin-only.
   "),
-  # ============================================================
-  # OVERVIEW KPI CARDS
-  # ============================================================
   
-  kpi_hr = list(
-    user = HTML("
-      <b>What this shows:</b><br>
-      Your average heart rate across all readings in the selected range,
-      measured in beats per minute (bpm).<br><br>
-      <b>Data source:</b><br>
-      Fitbit 5-minute heart rate readings<br><br>
-      <b>Note:</b><br>
-      A typical resting heart rate for adults is 60–100 bpm.
-      Lower resting HR often indicates better cardiovascular fitness.
-    "),
-    admin = HTML("
-      <b>What this shows:</b><br>
-      Mean heart rate across all 5-minute interval readings
-      in the selected range, in bpm.<br><br>
-      <b>Data source:</b><br>
-      hr_intraday_5m.csv<br><br>
-      <b>Filters:</b><br>
-      Values between 30–220 bpm only.<br><br>
-      <b>All Participants mode:</b><br>
-      Average across all participants' readings combined.
-    ")
-  ),
   
-  kpi_steps = list(
-    user = HTML("
-      <b>What this shows:</b><br>
-      Your average daily step count across the selected range.<br><br>
-      <b>Data source:</b><br>
-      Fitbit step count data<br><br>
-      <b>Note:</b><br>
-      The commonly cited goal is 10,000 steps per day,
-      though research suggests benefits begin at lower counts.
-    "),
-    admin = HTML("
-      <b>What this shows:</b><br>
-      Mean daily step total across the selected range.<br><br>
-      <b>Data source:</b><br>
-      steps_intraday_5m.csv<br><br>
-      <b>All Participants mode:</b><br>
-      Average daily steps across all participants combined.
-    ")
-  ),
+  # ============================================================================
+  # DATA VIEW TAB (admin-only tab)
+  # Single HTML() entry since only admins see this tab.
+  # ============================================================================
   
-  kpi_sleep = list(
-    user = HTML("
-      <b>What this shows:</b><br>
-      Your average nightly deep sleep duration in minutes
-      across the selected range.<br><br>
-      <b>Data source:</b><br>
-      Fitbit sleep stage data<br><br>
-      <b>Note:</b><br>
-      Deep sleep is the most restorative stage. Adults typically
-      get 1–2 hours of deep sleep per night (roughly 13–23% of
-      total sleep time).
-    "),
-    admin = HTML("
-      <b>What this shows:</b><br>
-      Mean nightly deep sleep minutes across the selected range.<br><br>
-      <b>Data source:</b><br>
-      sleep_minute.csv (sleep_stage == 'deep')<br><br>
-      <b>All Participants mode:</b><br>
-      Average deep sleep minutes per night across all participants.
-    ")
-  ),
-  
-  kpi_spo2 = list(
-    user = HTML("
-      <b>What this shows:</b><br>
-      Your average blood oxygen saturation (SpO2) across the
-      selected range, as a percentage.<br><br>
-      <b>Data source:</b><br>
-      Fitbit SpO2 sensor data<br><br>
-      <b>Note:</b><br>
-      Normal SpO2 is typically 95–100%. Values below 90%
-      may warrant medical attention.
-    "),
-    admin = HTML("
-      <b>What this shows:</b><br>
-      Mean SpO2 percentage across the selected range.<br><br>
-      <b>Data source:</b><br>
-      spo2_intraday.csv<br><br>
-      <b>Filters:</b><br>
-      Values between 70–100% only.<br><br>
-      <b>All Participants mode:</b><br>
-      Average SpO2 across all participants' readings combined.
-    ")
-  ),
-  
-  # ============================================================
-  # INSIGHTS METRIC CARDS
-  # ============================================================
-  
-  insight_best_sleep_card = list(
-    user = HTML("
-      <b>What this shows:</b><br>
-      The single night with the highest total sleep duration
-      in your selected range, and how many minutes you slept.<br><br>
-      <b>Data source:</b><br>
-      Fitbit nightly sleep totals
-    "),
-    admin = HTML("
-      <b>What this shows:</b><br>
-      The study day with the highest average total sleep minutes
-      across the selected range.<br><br>
-      <b>Data source:</b><br>
-      daily_metrics.csv (total_sleep_minutes)<br><br>
-      <b>All Participants mode:</b><br>
-      The study day with the highest cohort-average sleep duration.
-    ")
-  ),
-  
-  insight_most_active_card = list(
-    user = HTML("
-      <b>What this shows:</b><br>
-      The single day with the highest step count in your
-      selected range, and the total steps taken.<br><br>
-      <b>Data source:</b><br>
-      Fitbit step count data
-    "),
-    admin = HTML("
-      <b>What this shows:</b><br>
-      The study day with the highest total or average step count
-      across the selected range.<br><br>
-      <b>Data source:</b><br>
-      steps_intraday_5m.csv<br><br>
-      <b>All Participants mode:</b><br>
-      The study day with the highest cohort-average step count.
-    ")
-  ),
-  
-  insight_bedtime_card = list(
-    user = HTML("
-      <b>What this shows:</b><br>
-      Your typical bedtime — the average time you fell asleep
-      across all nights in the selected range.<br><br>
-      <b>Data source:</b><br>
-      Fitbit sleep onset time data<br><br>
-      <b>Note:</b><br>
-      Times after midnight are treated as early morning
-      to calculate the average correctly.
-    "),
-    admin = HTML("
-      <b>What this shows:</b><br>
-      Average sleep onset time across the selected range.<br><br>
-      <b>Data source:</b><br>
-      sleep_minute.csv (earliest datetime per sleep session)<br><br>
-      <b>All Participants mode:</b><br>
-      Average bedtime across all participants combined.
-      The (avg) suffix is appended to the displayed time.
-    ")
-  ),
-  
-  # ============================================================
-  # DATA VIEW TAB (admin-only)
-  # ============================================================
-  
+  # Raw Data Viewer — DT table of any loaded CSV, filtered by current selection.
   data_view_table = HTML("
     <b>What this shows:</b><br>
     Raw CSV data for any dataset, exactly as loaded and filtered by
@@ -746,27 +913,44 @@ CHART_INFO <- list(
     Admin-only. Use the dataset selector to switch between tables.
   ")
   
-)
+) # end CHART_INFO
 
-# ------------------------------------------------------------------------------
+
+# ==============================================================================
 # chart_card_ui()
+# ==============================================================================
+#' Build a standardized collapsible chart card with title, eye toggle,
+#' and info popover.
+#'
+#' Used for every Plotly and DT chart in the dashboard. The card header
+#' shows the chart title on the left and two icons on the right:
+#'   - Eye icon: collapses/expands the chart body (server-wired via
+#'     init_chart_card() in app.R).
+#'   - Info circle icon: opens a popover with chart-specific context,
+#'     sourced from CHART_INFO[[chart_id]] and filtered by is_admin.
+#'
+#' @param chart_id  Unique string ID. Must match the Shiny output ID used in
+#'                  the corresponding render*() call in app.R. No two charts
+#'                  may share a chart_id.
+#' @param title     Display title shown in the card header.
+#' @param output_fn Shiny output UI function reference, e.g. plotlyOutput or
+#'                  DT::dataTableOutput. Passed as a function, not a call.
+#' @param is_admin  Logical. If TRUE, the card starts collapsed and the admin
+#'                  version of the CHART_INFO popover is shown. Defaults FALSE.
+#' @param extra_ui  Optional Shiny UI element rendered above the chart inside
+#'                  the collapsible body (e.g. a radioButtons selector or a
+#'                  selectInput for the hypnogram night picker).
+#' @param ...       Additional arguments passed to output_fn, e.g. height = "400px".
+#'
+#' @return A div containing the complete chart card UI.
 # ------------------------------------------------------------------------------
-#' Build a standardized, collapsible chart card with a title, collapse
-#' toggle, and info popover.
-#'
-#' @param chart_id Unique string ID for this chart.
-#' @param title Display title shown in the card header.
-#' @param output_fn The Shiny output UI function (e.g. plotlyOutput, DTOutput).
-#' @param is_admin Logical. Controls default collapse state and popover content.
-#' @param extra_ui Optional UI to render inside the card body above the chart.
-#' @param ... Additional arguments passed to output_fn (e.g. height = "400px").
-#'
-#' @return A div containing the full chart card.
-chart_card_ui <- function(chart_id, title, output_fn, is_admin = FALSE, extra_ui = NULL, ...) {
+chart_card_ui <- function(chart_id, title, output_fn, is_admin = FALSE,
+                          extra_ui = NULL, ...) {
   
   body_id <- paste0(chart_id, "_body")
   
-  # Select popover content based on role
+  # Select popover content based on role.
+  # Supports single HTML() (same for all roles) or list(user=, admin=).
   info_entry <- CHART_INFO[[chart_id]]
   if (is.null(info_entry)) {
     info_content <- HTML("<i>No description available for this chart yet.</i>")
@@ -778,28 +962,35 @@ chart_card_ui <- function(chart_id, title, output_fn, is_admin = FALSE, extra_ui
   
   div(class = "chart-card",
       
-      # ---- Header ----
-      div(style = "display: flex; justify-content: space-between; align-items: center; padding: 0 15px;",
+      # Header: title (left) + icons (right)
+      div(
+        style = "display: flex; justify-content: space-between; align-items: center; padding: 0 15px;",
+        
+        p(title, class = "chart-title", style = "margin: 0;"),
+        
+        div(
+          style = "display: flex; align-items: center; gap: 14px;",
           
-          p(title, class = "chart-title", style = "margin: 0;"),
+          # Eye toggle — rendered server-side by init_chart_card() in app.R.
+          # The icon reflects chart_state[[chart_id]]: eye = open, eye-slash = collapsed.
+          uiOutput(paste0(chart_id, "_toggle_ui"), inline = TRUE),
           
-          div(style = "display: flex; align-items: center; gap: 14px;",
-              
-              uiOutput(paste0(chart_id, "_toggle_ui"), inline = TRUE),
-              
-              popover(
-                span(
-                  bsicons::bs_icon("info-circle"),
-                  class = "chart-info-trigger"
-                ),
-                title = "About This Chart",
-                info_content,
-                placement = "left"
-              )
+          # Info popover — purely client-side via bslib::popover().
+          # Color change when open is handled by CSS (.chart-info-trigger[aria-describedby]).
+          popover(
+            span(
+              bsicons::bs_icon("info-circle"),
+              class = "chart-info-trigger"
+            ),
+            title     = "About This Chart",
+            info_content,
+            placement = "left"
           )
+        )
       ),
       
-      # ---- Collapsible body ----
+      # Collapsible body — visibility controlled by init_chart_card() in app.R.
+      # Starts hidden (admin) or visible (user) based on is_admin.
       div(id = body_id,
           extra_ui,
           output_fn(chart_id, ...)
@@ -807,29 +998,43 @@ chart_card_ui <- function(chart_id, title, output_fn, is_admin = FALSE, extra_ui
   )
 }
 
-# ------------------------------------------------------------------------------
+
+# ==============================================================================
 # metric_card_ui()
+# ==============================================================================
+#' Build a collapsible metric (KPI) card with eye toggle and info popover.
+#'
+#' Used for the four Overview KPI cards and the three Insights summary cards.
+#' Mirrors chart_card_ui() in structure, but differs in that:
+#'   - Icons are stacked vertically in the top-right corner (absolute position)
+#'     rather than inline with a title, since metric cards have no title bar.
+#'   - Instead of collapsing the body, toggling switches between showing the
+#'     real value (textOutput) and a "Hidden" placeholder.
+#'   - The "Hidden" state is the default for admins; values are visible by
+#'     default for regular users.
+#'
+#' @param card_id     Unique string ID. Must match a key in CHART_INFO and be
+#'                    used in the corresponding init_metric_card() call in app.R.
+#' @param label       ALL-CAPS label displayed above the value (e.g. "AVG HEART RATE").
+#' @param output_id   The textOutput() ID whose value this card displays.
+#' @param unit        Optional unit label shown below the value (e.g. "bpm", "%").
+#' @param is_admin    Logical. If TRUE, card starts hidden and shows admin popover.
+#' @param value_size  "large" renders the value in h2 (Overview KPIs);
+#'                    "medium" renders in h3 (Insights cards). Defaults "large".
+#'
+#' @return A div containing the complete metric card UI.
 # ------------------------------------------------------------------------------
-#' Build a collapsible metric card with eye toggle and info popover.
-#' Mirrors chart_card_ui() but sized for KPI/insight cards.
-#'
-#' @param card_id Unique string ID for this card.
-#' @param label ALL-CAPS label shown above the value.
-#' @param output_id The textOutput ID for the metric value.
-#' @param unit Small unit label shown below the value (e.g. "bpm").
-#' @param is_admin Logical. Controls default hidden state and popover content.
-#' @param value_size "large" (h2) for Overview KPIs, "medium" (h3) for Insights.
-#'
-#' @return A div containing the full metric card.
 metric_card_ui <- function(card_id, label, output_id, unit = NULL,
                            is_admin = FALSE, value_size = "large") {
   
+  # Choose h2 or h3 based on card context
   value_tag <- if (value_size == "large") {
     h2(textOutput(output_id), class = "metric-value")
   } else {
     h3(textOutput(output_id), class = "metric-value")
   }
   
+  # Select popover content based on role (same logic as chart_card_ui)
   info_entry <- CHART_INFO[[card_id]]
   if (is.null(info_entry)) {
     info_content <- HTML("<i>No description available.</i>")
@@ -842,27 +1047,39 @@ metric_card_ui <- function(card_id, label, output_id, unit = NULL,
   div(class = "metric-card",
       style = "position: relative;",
       
-      # Icons in top-right corner — stacked vertically
-      div(style = "position: absolute; top: 6px; right: 8px; display: flex; flex-direction: column; gap: 4px; align-items: center;",
-          uiOutput(paste0(card_id, "_toggle_ui"), inline = TRUE),
-          popover(
-            span(
-              bsicons::bs_icon("info-circle"),
-              class = "chart-info-trigger",
-              style = "font-size: 0.7rem;"
-            ),
-            title = "About This Metric",
-            info_content,
-            placement = "left"
-          )
+      # Icons stacked vertically in top-right corner.
+      # Absolute positioning avoids interfering with the label/value layout.
+      div(
+        style = "position: absolute; top: 6px; right: 8px; display: flex; flex-direction: column; gap: 4px; align-items: center;",
+        
+        # Eye toggle — rendered server-side by init_metric_card() in app.R.
+        uiOutput(paste0(card_id, "_toggle_ui"), inline = TRUE),
+        
+        # Info popover — same client-side pattern as chart_card_ui.
+        popover(
+          span(
+            bsicons::bs_icon("info-circle"),
+            class = "chart-info-trigger",
+            style = "font-size: 0.7rem;"
+          ),
+          title     = "About This Metric",
+          info_content,
+          placement = "left"
+        )
       ),
       
-      # Card content
+      # Label always visible regardless of hidden state
       p(label, class = "metric-label"),
+      
+      # Value div — shown when card is open, hidden when admin has toggled off.
+      # Controlled by init_metric_card() via shinyjs::show/hide in app.R.
       div(id = paste0(card_id, "_value"),
           value_tag,
           if (!is.null(unit)) p(unit, class = "metric-unit")
       ),
+      
+      # Hidden placeholder — shown when admin has toggled the value off.
+      # Starts hidden (display:none); init_metric_card() swaps visibility on toggle.
       div(id = paste0(card_id, "_hidden"),
           style = "display: none;",
           h2("Hidden", class = "metric-value",
