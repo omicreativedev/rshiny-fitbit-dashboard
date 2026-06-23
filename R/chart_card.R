@@ -1,5 +1,5 @@
 # ==============================================================================
-# R/chart_card.R
+# R/chart_card.R2
 # ==============================================================================
 # Reusable wrapper for every chart card in the dashboard. Provides:
 #   - A collapse/expand toggle (eye / eye-slash-fill icon)
