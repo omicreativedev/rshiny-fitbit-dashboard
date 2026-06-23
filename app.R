@@ -71,7 +71,9 @@ ADMIN_ONLY_TABS <- c(
 # hidden by the tab-level lockout, so listing them here is redundant
 # (but harmless, in case a chart later moves to a shared tab).
 ADMIN_ONLY_CHARTS <- c(
-  "hrv_chart"
+  "hrv_chart",
+  "weekday_hrv_chart",
+  "weekday_hr_chart"
 )
 
 # ============================================================================
@@ -490,6 +492,7 @@ server <- function(input, output, session) {
         shinyjs::hide(body_id)
       } else {
         shinyjs::show(body_id)
+        shinyjs::delay(300, shinyjs::runjs("window.dispatchEvent(new Event('resize'));"))
       }
     }, ignoreInit = TRUE)
   }
@@ -605,6 +608,7 @@ server <- function(input, output, session) {
         paste("Logged in as:", participant_id)
       }
     })
+    shinyjs::delay(300, shinyjs::runjs("window.dispatchEvent(new Event('resize'));"))
   })
   
   # ==================== UPDATE DATE RANGE WHEN ADMIN SWITCHES PARTICIPANT ====================
@@ -973,6 +977,31 @@ server <- function(input, output, session) {
     df
   })
   
+  # HRV vs Sleep data (joined for Projections tab)
+  hrv_sleep_data <- reactive({
+    req(auth$logged_in)
+    hrv <- filtered_data_by_day()[["hrv_intraday"]]
+    metrics <- filtered_data_by_day()[["daily_metrics"]]
+    
+    if (is.null(hrv) || nrow(hrv) == 0 || is.null(metrics) || nrow(metrics) == 0) {
+      return(NULL)
+    }
+    
+    hrv_daily <- hrv %>%
+      mutate(date = as.Date(substr(timestamp, 1, 10))) %>%
+      group_by(participantID, date) %>%
+      summarise(hrv_avg = mean(rmssd_ms, na.rm = TRUE), .groups = "drop")
+    
+    metrics_clean <- metrics %>%
+      mutate(date = as.Date(date)) %>%
+      select(participantID, date, total_sleep_minutes, study_day)
+    
+    hrv_daily %>%
+      inner_join(metrics_clean, by = c("participantID", "date")) %>%
+      filter(!is.na(hrv_avg), !is.na(total_sleep_minutes),
+             total_sleep_minutes > 0, hrv_avg > 0)
+  })
+  
   # ==================== METRIC CARDS ====================
   # Summary statistics shown at the top of the Overview tab
   
@@ -1318,6 +1347,13 @@ server <- function(input, output, session) {
   # ================= INSIGHTS Tab =================
   
   insights_tab_content <- function(is_admin) {
+    init_chart_card("weekday_sleep_chart", is_admin)
+    init_chart_card("weekday_steps_chart", is_admin)
+    if (is_admin) {
+      init_chart_card("weekday_hrv_chart", is_admin)
+      init_chart_card("weekday_hr_chart", is_admin)
+    }
+    
     tagList(
       br(),
       fluidRow(
@@ -1330,19 +1366,60 @@ server <- function(input, output, session) {
         column(4, div(class = "metric-card",
                       p("TYPICAL BEDTIME", class = "metric-label"),
                       h3(textOutput("insight_typical_bedtime"), class = "metric-value")))
-      )
+      ),
+      br(),
+      fluidRow(
+        column(6, chart_card_ui(
+          chart_id  = "weekday_sleep_chart",
+          title     = "Sleep Duration: Weekday vs Weekend",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "300px"
+        )),
+        column(6, chart_card_ui(
+          chart_id  = "weekday_steps_chart",
+          title     = "Steps: Weekday vs Weekend",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "300px"
+        ))
+      ),
+      if (is_admin) {
+        fluidRow(
+          column(6, chart_card_ui(
+            chart_id  = "weekday_hrv_chart",
+            title     = "HRV: Weekday vs Weekend",
+            output_fn = plotlyOutput,
+            is_admin  = is_admin,
+            height    = "300px"
+          )),
+          column(6, chart_card_ui(
+            chart_id  = "weekday_hr_chart",
+            title     = "Resting Heart Rate: Weekday vs Weekend",
+            output_fn = plotlyOutput,
+            is_admin  = is_admin,
+            height    = "300px"
+          ))
+        )
+      }
     )
   }
   
   # ================= PROJECTIONS Tab =================
   
   projections_tab_content <- function(is_admin) {
+    init_chart_card("hrv_sleep_chart", is_admin)
+    
     tagList(
       br(),
       fluidRow(
-        column(12, div(class = "chart-card",
-                       p("Coming Soon - Trend Projections", class = "chart-title"),
-                       p("Machine learning forecasts and trend analysis will appear here.")))
+        column(12, chart_card_ui(
+          chart_id  = "hrv_sleep_chart",
+          title     = "HRV vs Sleep Duration",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "450px"
+        ))
       )
     )
   }
@@ -1878,6 +1955,65 @@ server <- function(input, output, session) {
   })
   # end hrv
   
+  
+  # HRV vs Sleep scatter
+  output$hrv_sleep_chart <- renderPlotly({
+    req(auth$logged_in)
+    df <- hrv_sleep_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No HRV and sleep data available for the selected range"))
+    }
+    
+    is_all <- auth$is_admin && is.null(current_participant())
+    
+    cor_value <- cor(df$total_sleep_minutes, df$hrv_avg, use = "complete.obs")
+    
+    if (is_all) {
+      p <- ggplot(df, aes(x = total_sleep_minutes, y = hrv_avg, color = participantID)) +
+        geom_point(size = 3, alpha = 0.7) +
+        geom_smooth(method = "lm", se = TRUE, color = clr$text_secondary,
+                    fill = clr$grid_line, alpha = 0.3, linewidth = 0.8) +
+        labs(x = "Total Sleep (minutes)", y = "Avg HRV (RMSSD ms)") +
+        annotate("text",
+                 x = quantile(df$total_sleep_minutes, 0.80, na.rm = TRUE),
+                 y = quantile(df$hrv_avg, 0.95, na.rm = TRUE),
+                 label = paste("r =", round(cor_value, 2)),
+                 size = 4, color = clr$text_secondary) +
+        dash_theme()
+    }  else {
+      x_pos <- quantile(df$total_sleep_minutes, 0.80, na.rm = TRUE)
+      y_pos <- quantile(df$hrv_avg, 0.95, na.rm = TRUE)
+      
+      p <- ggplot(df, aes(x = total_sleep_minutes, y = hrv_avg)) +
+        geom_point(color = clr$hr, size = 3, alpha = 0.7) +
+        geom_smooth(method = "lm", se = TRUE, color = clr$hrv,
+                    fill = clr$grid_line, alpha = 0.3, linewidth = 0.8) +
+        labs(x = "Total Sleep (minutes)", y = "Avg HRV (RMSSD ms)") +
+        annotate("text",
+                 x = x_pos, y = y_pos,
+                 label = paste("r =", round(cor_value, 2)),
+                 size = 4, color = clr$text_secondary) +
+        dash_theme()
+    }
+    
+    ggplotly(p, tooltip = c("x", "y")) %>%
+      layout(
+        hoverlabel = list(bgcolor = clr$bg),
+        legend = list(orientation = "h", xanchor = "center",
+                      x = 0.5, y = -0.5, title = list(text = "")),
+        margin = list(l = 50, r = 20, t = 20, b = 80)
+      ) %>%
+      config(
+        toImageButtonOptions = list(
+          format   = "png",
+          filename = "hrv_vs_sleep",
+          width    = 800,
+          height   = 600,
+          scale    = 3
+        )
+      )
+  })
+  
   #--------------------SLEEP TAB
   
   # Sleep duration
@@ -1971,7 +2107,7 @@ server <- function(input, output, session) {
                                  font = list(size = 11, color = clr$text_secondary)) 
         else NULL,
         showlegend = TRUE,
-        legend = list(orientation = "h", yanchor = "bottom", y = -0.2,
+        legend = list(orientation = "h", yanchor = "bottom", y = -0.5,
                       xanchor = "center", x = 0.5),
         margin = list(l = 20, r = 20, t = 30, b = 20)
       )
@@ -2326,9 +2462,9 @@ server <- function(input, output, session) {
           xaxis = list(title = "Study Day"),
           yaxis = list(title = if (is_all) "Avg Minutes (all participants)" else "Minutes"),
           legend = list(orientation = "h", xanchor = "center", x = 0.5,
-                        yanchor = "top", y = -0.2, title = list(text = "")),
+                        yanchor = "top", y = -0.5, title = list(text = "")),
           hoverlabel = list(bgcolor = clr$bg),
-          margin = list(l = 50, r = 20, t = 20, b = 60)
+          margin = list(l = 50, r = 20, t = 20, b = 80)
         )
     } else {
       chart_data <- df %>%
@@ -2357,9 +2493,10 @@ server <- function(input, output, session) {
           barmode = "stack",
           xaxis = list(title = "Date", tickformat = "%b %d"),
           yaxis = list(title = "Minutes"),
-          legend = list(orientation = "h", xanchor = "center", x = 0.5, yanchor = "top", y = -0.2),
+          legend = list(orientation = "h", xanchor = "center", x = 0.5,
+                        yanchor = "top", y = -0.5, title = list(text = "")),
           hoverlabel = list(bgcolor = clr$bg),
-          margin = list(l = 50, r = 20, t = 20, b = 60)
+          margin = list(l = 50, r = 20, t = 20, b = 80)
         )
     }
   })
@@ -2404,19 +2541,20 @@ server <- function(input, output, session) {
     has_type <- "exercise_type" %in% names(d)
     
     is_all <- auth$is_admin && is.null(current_participant())
-    split_by_participant <- is_all && !is.null(input$exercise_sessions_view) && 
+    split_by_participant <- is_all && !is.null(input$exercise_sessions_view) &&
       input$exercise_sessions_view == "participant"
+    
+    full_color_map <- c(activity_color_map, other = clr$steps)
+    label_color_map <- setNames(full_color_map, tools::toTitleCase(names(full_color_map)))
     
     if (has_type) {
       d <- d %>%
         mutate(
-          activity_type = tolower(trimws(exercise_type)),
+          activity_type  = tolower(trimws(exercise_type)),
           activity_label = ifelse(activity_type %in% names(activity_color_map),
                                   activity_type, "other"),
-          point_color   = ifelse(activity_type %in% names(activity_color_map),
-                                 activity_color_map[activity_type],
-                                 clr$steps),
-          hover_text    = paste0(
+          color_label    = tools::toTitleCase(activity_label),
+          hover_text     = paste0(
             if (is_all) paste0("Participant: ", participantID, "<br>") else "",
             "Type: ", activity_type,
             "<br>Duration: ", round(duration_min), " min",
@@ -2425,7 +2563,7 @@ server <- function(input, output, session) {
     } else {
       d <- d %>%
         mutate(
-          point_color = clr$steps,
+          color_label = "Other",
           hover_text  = paste0(
             if (is_all) paste0("Participant: ", participantID, "<br>") else "",
             "Duration: ", round(duration_min), " min",
@@ -2433,39 +2571,46 @@ server <- function(input, output, session) {
         )
     }
     
+    if (split_by_participant) {
+      d <- d %>%
+        mutate(color_label = participantID)
+      okabe_ito <- c(clr$hr, clr$steps, clr$deep, clr$rem, clr$light, clr$hrv, clr$green)
+      participant_ids <- unique(d$participantID)
+      participant_colors <- setNames(okabe_ito[seq_along(participant_ids)], participant_ids)
+      color_scale <- scale_color_manual(values = participant_colors, guide = "legend")
+    } else {
+      color_scale <- scale_color_manual(
+        values = label_color_map,
+        guide  = if (has_type) "legend" else "none"
+      )
+    }
+    
     if (input$view_mode == "day") {
       p <- ggplot(d, aes(x = study_day, y = duration_min,
-                         size = duration_min, color = point_color,
+                         size = duration_min, color = color_label,
                          text = hover_text)) +
         scale_x_continuous(breaks = scales::pretty_breaks())
     } else {
       p <- ggplot(d, aes(x = date, y = duration_min,
-                         size = duration_min, color = point_color,
+                         size = duration_min, color = color_label,
                          text = hover_text)) +
         scale_x_date(date_labels = "%b %d")
     }
     
-    full_color_map <- c(activity_color_map, other = clr$steps)
-    
     p <- p +
       geom_point(alpha = 0.85) +
-      scale_color_identity(
-        guide  = if (split_by_participant || has_type) "legend" else "none",
-        labels = if (split_by_participant) NULL
-        else if (has_type) names(full_color_map) else NULL,
-        breaks = if (split_by_participant) NULL
-        else if (has_type) unname(full_color_map) else NULL
-      ) +
+      color_scale +
       scale_size_continuous(range = c(4, 16), guide = "none") +
       scale_y_continuous(breaks = scales::pretty_breaks()) +
       labs(x = if (input$view_mode == "day") "Study Day" else "Date",
-           y = "Duration (minutes)",
-           color = "Activity") +
+           y = "Duration (minutes)") +
       dash_theme()
     
     ggplotly(p, tooltip = "text") %>%
       layout(hoverlabel = list(bgcolor = clr$bg),
-             margin = list(l = 50, r = 20, t = 20, b = 40))
+             legend = list(orientation = "h", xanchor = "center",
+                           x = 0.5, y = -0.5, title = list(text = "")),
+             margin = list(l = 50, r = 20, t = 20, b = 80))
   })
   #------------------------end activity
   
@@ -2798,6 +2943,183 @@ server <- function(input, output, session) {
     suffix <- if (is_all) " (avg)" else ""
     paste0(sprintf("%02d:%02d", floor(avg_hr), round((avg_hr %% 1) * 60)), suffix)
   })
+  
+  
+  
+  
+  # ==================== INSIGHTS TAB WEEKDAY VS WEEKEND CHARTS ====================
+  
+  output$weekday_sleep_chart <- renderPlotly({
+    req(auth$logged_in)
+    df <- sleep_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No sleep data available"))
+    }
+    if (!"day_type" %in% names(df)) {
+      return(create_empty_plot("Day type data not available"))
+    }
+    
+    is_all <- auth$is_admin && is.null(current_participant())
+    
+    sleep_summary <- df %>%
+      filter(sleep_stage %in% c("deep", "rem", "light", "wake")) %>%
+      group_by(participantID, dateOfSleep, day_type) %>%
+      summarise(total_minutes = n(), .groups = "drop")
+    
+    if (is_all) {
+      plot_data <- sleep_summary %>%
+        group_by(day_type) %>%
+        summarise(avg_minutes = mean(total_minutes, na.rm = TRUE), .groups = "drop")
+      
+      p <- ggplot(plot_data, aes(x = day_type, y = avg_minutes, fill = day_type)) +
+        geom_col(width = 0.5, alpha = 0.9) +
+        scale_fill_manual(values = c(Weekday = clr$deep, Weekend = clr$rem)) +
+        labs(x = NULL, y = "Avg Sleep (minutes)") +
+        dash_theme() +
+        theme(legend.position = "none")
+    } else {
+      plot_data <- sleep_summary %>%
+        group_by(day_type) %>%
+        summarise(avg_minutes = mean(total_minutes, na.rm = TRUE), .groups = "drop")
+      
+      p <- ggplot(plot_data, aes(x = day_type, y = avg_minutes, fill = day_type)) +
+        geom_col(width = 0.5, alpha = 0.9) +
+        scale_fill_manual(values = c(Weekday = clr$deep, Weekend = clr$rem)) +
+        labs(x = NULL, y = "Sleep Duration (minutes)") +
+        dash_theme() +
+        theme(legend.position = "none")
+    }
+    
+    ggplotly(p, tooltip = c("x", "y")) %>%
+      layout(hoverlabel = list(bgcolor = clr$bg),
+             margin = list(l = 50, r = 20, t = 20, b = 40))
+  })
+  
+  output$weekday_steps_chart <- renderPlotly({
+    req(auth$logged_in)
+    df <- steps_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No steps data available"))
+    }
+    if (!"day_type" %in% names(df)) {
+      return(create_empty_plot("Day type data not available"))
+    }
+    
+    is_all <- auth$is_admin && is.null(current_participant())
+    
+    daily_steps <- df %>%
+      mutate(date = as.Date(date)) %>%
+      group_by(participantID, date, day_type) %>%
+      summarise(total_steps = sum(steps_5min, na.rm = TRUE), .groups = "drop")
+    
+    if (is_all) {
+      plot_data <- daily_steps %>%
+        group_by(day_type) %>%
+        summarise(avg_steps = mean(total_steps, na.rm = TRUE), .groups = "drop")
+      
+      p <- ggplot(plot_data, aes(x = day_type, y = avg_steps, fill = day_type)) +
+        geom_col(width = 0.5, alpha = 0.9) +
+        scale_fill_manual(values = c(Weekday = clr$steps, Weekend = clr$walk)) +
+        scale_y_continuous(labels = scales::comma) +
+        labs(x = NULL, y = "Avg Steps") +
+        dash_theme() +
+        theme(legend.position = "none")
+    } else {
+      plot_data <- daily_steps %>%
+        group_by(day_type) %>%
+        summarise(avg_steps = mean(total_steps, na.rm = TRUE), .groups = "drop")
+      
+      p <- ggplot(plot_data, aes(x = day_type, y = avg_steps, fill = day_type)) +
+        geom_col(width = 0.5, alpha = 0.9) +
+        scale_fill_manual(values = c(Weekday = clr$steps, Weekend = clr$walk)) +
+        scale_y_continuous(labels = scales::comma) +
+        labs(x = NULL, y = "Steps") +
+        dash_theme() +
+        theme(legend.position = "none")
+    }
+    
+    ggplotly(p, tooltip = c("x", "y")) %>%
+      layout(hoverlabel = list(bgcolor = clr$bg),
+             margin = list(l = 50, r = 20, t = 20, b = 40))
+  })
+  
+  output$weekday_hrv_chart <- renderPlotly({
+    req(auth$logged_in, auth$is_admin)
+    df <- hrv_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No HRV data available"))
+    }
+    if (!"day_type" %in% names(df)) {
+      return(create_empty_plot("Day type data not available"))
+    }
+    
+    is_all <- auth$is_admin && is.null(current_participant())
+    
+    if (is_all) {
+      plot_data <- df %>%
+        filter(!is.na(rmssd_ms)) %>%
+        group_by(day_type) %>%
+        summarise(avg_hrv = mean(rmssd_ms, na.rm = TRUE), .groups = "drop")
+      y_label <- "Avg HRV (RMSSD ms, all participants)"
+    } else {
+      plot_data <- df %>%
+        filter(!is.na(rmssd_ms)) %>%
+        group_by(day_type) %>%
+        summarise(avg_hrv = mean(rmssd_ms, na.rm = TRUE), .groups = "drop")
+      y_label <- "Avg HRV (RMSSD ms)"
+    }
+    
+    p <- ggplot(plot_data, aes(x = day_type, y = avg_hrv, fill = day_type)) +
+      geom_col(width = 0.5, alpha = 0.9) +
+      scale_fill_manual(values = c(Weekday = clr$hrv, Weekend = clr$green)) +
+      labs(x = NULL, y = y_label) +
+      dash_theme() +
+      theme(legend.position = "none")
+    
+    ggplotly(p, tooltip = c("x", "y")) %>%
+      layout(hoverlabel = list(bgcolor = clr$bg),
+             margin = list(l = 50, r = 20, t = 20, b = 40))
+  })
+  
+  output$weekday_hr_chart <- renderPlotly({
+    req(auth$logged_in, auth$is_admin)
+    df <- daily_metrics()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No daily metrics data available"))
+    }
+    if (!"day_type" %in% names(df)) {
+      return(create_empty_plot("Day type data not available"))
+    }
+    
+    is_all <- auth$is_admin && is.null(current_participant())
+    
+    if (is_all) {
+      plot_data <- df %>%
+        filter(!is.na(resting_heart_rate)) %>%
+        group_by(day_type) %>%
+        summarise(avg_hr = mean(resting_heart_rate, na.rm = TRUE), .groups = "drop")
+      y_label <- "Avg Resting HR (bpm, all participants)"
+    } else {
+      plot_data <- df %>%
+        filter(!is.na(resting_heart_rate)) %>%
+        group_by(day_type) %>%
+        summarise(avg_hr = mean(resting_heart_rate, na.rm = TRUE), .groups = "drop")
+      y_label <- "Avg Resting HR (bpm)"
+    }
+    
+    p <- ggplot(plot_data, aes(x = day_type, y = avg_hr, fill = day_type)) +
+      geom_col(width = 0.5, alpha = 0.9) +
+      scale_fill_manual(values = c(Weekday = clr$hr, Weekend = clr$rem)) +
+      labs(x = NULL, y = y_label) +
+      dash_theme() +
+      theme(legend.position = "none")
+    
+    ggplotly(p, tooltip = c("x", "y")) %>%
+      layout(hoverlabel = list(bgcolor = clr$bg),
+             margin = list(l = 50, r = 20, t = 20, b = 40))
+  })
+  
+  
   
   # ANALYSIS TAB
   

@@ -1,5 +1,5 @@
 # ==============================================================================
-# R/chart_card.R2
+# R/chart_card.R
 # ==============================================================================
 # Reusable wrapper for every chart card in the dashboard. Provides:
 #   - A collapse/expand toggle (eye / eye-slash-fill icon)
@@ -425,6 +425,109 @@ CHART_INFO <- list(
       &bull; <b>By Study Day:</b> Per study day<br><br>
       <b>All Participants mode:</b><br>
       Average distance per study day across all participants.
+    ")
+  ),
+  
+  # ============================================================
+  # INSIGHTS TAB — WEEKDAY VS WEEKEND
+  # ============================================================
+  
+  weekday_sleep_chart = list(
+    user = HTML("
+      <b>What this shows:</b><br>
+      Your average sleep duration on weekdays compared to weekends,
+      so you can see whether your sleep patterns shift on days off.<br><br>
+      <b>Data source:</b><br>
+      Fitbit minute-by-minute sleep data<br><br>
+      <b>Note:</b><br>
+      Based on your selected study day range.
+    "),
+    admin = HTML("
+      <b>What this shows:</b><br>
+      Average total sleep duration on weekdays vs weekends.<br><br>
+      <b>Data source:</b><br>
+      sleep_minute.csv<br><br>
+      <b>All Participants mode:</b><br>
+      Cohort average across all participants per day type.
+    ")
+  ),
+  
+  weekday_steps_chart = list(
+    user = HTML("
+      <b>What this shows:</b><br>
+      Your average daily step count on weekdays compared to weekends,
+      revealing whether you are more active on work days or rest days.<br><br>
+      <b>Data source:</b><br>
+      Fitbit step count data<br><br>
+      <b>Note:</b><br>
+      Based on your selected study day range.
+    "),
+    admin = HTML("
+      <b>What this shows:</b><br>
+      Average daily steps on weekdays vs weekends.<br><br>
+      <b>Data source:</b><br>
+      steps_intraday_5m.csv<br><br>
+      <b>All Participants mode:</b><br>
+      Cohort average across all participants per day type.
+    ")
+  ),
+  
+  weekday_hrv_chart = HTML("
+    <b>What this shows:</b><br>
+    Average HRV (RMSSD) on weekdays vs weekends. Lower HRV on weekdays
+    may indicate elevated stress or reduced recovery during the work week,
+    which is directly relevant to studying physiological stress responses.<br><br>
+    <b>Data source:</b><br>
+    hrv_intraday.csv<br><br>
+    <b>Admin-only chart.</b><br><br>
+    <b>All Participants mode:</b><br>
+    Cohort average RMSSD per day type across all participants.
+  "),
+  
+  weekday_hr_chart = HTML("
+    <b>What this shows:</b><br>
+    Average resting heart rate on weekdays vs weekends. Elevated resting HR
+    on weekdays compared to weekends can be a marker of sustained physiological
+    stress, relevant to discrimination and stress research.<br><br>
+    <b>Data source:</b><br>
+    daily_metrics.csv (resting_heart_rate column)<br><br>
+    <b>Admin-only chart.</b><br><br>
+    <b>All Participants mode:</b><br>
+    Cohort average resting HR per day type across all participants.
+  "),
+  
+  # ============================================================
+  # PROJECTIONS TAB
+  # ============================================================
+  
+  hrv_sleep_chart = list(
+    user = HTML("
+      <b>What this shows:</b><br>
+      The relationship between your total sleep duration and your heart rate
+      variability (HRV) — a measure of how recovered your body is. Each dot
+      represents one night. The trend line shows whether sleeping more is
+      associated with higher HRV for you personally.<br><br>
+      <b>Data sources:</b><br>
+      Fitbit HRV readings and nightly sleep totals<br><br>
+      <b>Note:</b><br>
+      The r value shown is the correlation coefficient — closer to 1 means
+      a stronger positive relationship between sleep and HRV.
+    "),
+    admin = HTML("
+      <b>What this shows:</b><br>
+      Scatter plot of nightly total sleep minutes vs average HRV (RMSSD),
+      with a linear regression line and confidence interval. Each dot
+      represents one participant-night. The r value is the Pearson
+      correlation coefficient.<br><br>
+      <b>Data sources:</b><br>
+      hrv_intraday.csv (daily average RMSSD) joined with
+      daily_metrics.csv (total_sleep_minutes) by participantID and date<br><br>
+      <b>All Participants mode:</b><br>
+      All participant-nights plotted together, colored by participant.
+      The regression line is fitted across the full cohort.<br><br>
+      <b>Note:</b><br>
+      Use the high-resolution download button (camera icon) for
+      publication-quality exports at 3x scale.
     ")
   ),
   
