@@ -672,7 +672,11 @@ server <- function(input, output, session) {
     # Individual participant or regular user: full toolbar
     shinyjs::show("view_toggle_container")
     shinyjs::show("date_picker_container")
-    shinyjs::show("admin_selector_container")
+    if (auth$is_admin) {
+      shinyjs::show("admin_selector_container")
+    } else {
+      shinyjs::hide("admin_selector_container")
+    }
   })
   
   # ==================== STUDY DAY RANGE UI ====================
@@ -1130,7 +1134,12 @@ server <- function(input, output, session) {
           title     = "Heart Rate Time Series",
           output_fn = plotlyOutput,
           is_admin  = is_admin,
-          height    = "400px"
+          height    = "400px",
+          extra_ui  = if (is_admin) {
+            radioButtons("hr_timeseries_view", NULL,
+                         choices = c("Aggregate" = "aggregate", "Split by Participant" = "split"),
+                         selected = "aggregate", inline = TRUE)
+          }
         ))
       ),
       # Heart Rate Distribution
@@ -1148,7 +1157,12 @@ server <- function(input, output, session) {
           title     = "Heart Rate by Hour of Day",
           output_fn = plotlyOutput,
           is_admin  = is_admin,
-          height    = "300px"
+          height    = "300px",
+          extra_ui  = if (is_admin) {
+            radioButtons("hr_by_hour_view", NULL,
+                         choices = c("Aggregate" = "aggregate", "Split by Participant" = "split"),
+                         selected = "aggregate", inline = TRUE)
+          }
         ))
       ),
       if (is_admin || !("hrv_chart" %in% ADMIN_ONLY_CHARTS)) {
@@ -1210,7 +1224,8 @@ server <- function(input, output, session) {
           output_fn = plotlyOutput,
           is_admin  = is_admin,
           height    = "300px",
-          extra_ui  = selectInput("hypnogram_date", "Select night:", choices = NULL, width = "200px")
+          extra_ui  = div(id = "hypnogram_date_container",
+                          selectInput("hypnogram_date", "Select night:", choices = NULL, width = "200px"))
         ))
       ),
       fluidRow(
@@ -1219,7 +1234,12 @@ server <- function(input, output, session) {
           title     = "Sleep Efficiency",
           output_fn = plotlyOutput,
           is_admin  = is_admin,
-          height    = "300px"
+          height    = "300px",
+          extra_ui  = if (is_admin) {
+            radioButtons("sleep_efficiency_view", NULL,
+                         choices = c("Aggregate" = "aggregate", "Split by Participant" = "split"),
+                         selected = "aggregate", inline = TRUE)
+          }
         ))
       )
     )
@@ -1250,7 +1270,12 @@ server <- function(input, output, session) {
           title     = "Exercise Sessions",
           output_fn = plotlyOutput,
           is_admin  = is_admin,
-          height    = "300px"
+          height    = "300px",
+          extra_ui  = if (is_admin) {
+            radioButtons("exercise_sessions_view", NULL,
+                         choices = c("By Activity Type" = "activity", "By Participant" = "participant"),
+                         selected = "activity", inline = TRUE)
+          }
         ))
       ),
       fluidRow(
@@ -1617,20 +1642,39 @@ server <- function(input, output, session) {
     }
     
     if (input$view_mode == "day") {
+      
       is_all <- auth$is_admin && is.null(current_participant())
       
-      chart_data <- df %>%
-        group_by(study_day) %>%
-        summarise(heart_rate_avg = mean(heart_rate_avg, na.rm = TRUE), .groups = "drop")
+      split_view <- is_all && !is.null(input$hr_timeseries_view) && 
+        input$hr_timeseries_view == "split"
       
-      p <- ggplot(chart_data, aes(x = study_day, y = heart_rate_avg)) +
-        geom_line(color = clr$hr, linewidth = 0.8, alpha = 0.9) +
-        geom_point(color = clr$hr, size = 2.5, alpha = 0.9) +
-        labs(x = "Study Day", 
-             y = if (is_all) "Avg Heart Rate (bpm, all participants)" else "Heart Rate (bpm)") +
-        scale_x_continuous(breaks = scales::pretty_breaks()) +
-        scale_y_continuous(breaks = scales::pretty_breaks(n = 6)) +
-        dash_theme()
+      if (split_view) {
+        chart_data <- df %>%
+          group_by(participantID, study_day) %>%
+          summarise(heart_rate_avg = mean(heart_rate_avg, na.rm = TRUE), .groups = "drop")
+        
+        p <- ggplot(chart_data, aes(x = study_day, y = heart_rate_avg,
+                                    color = participantID, group = participantID)) +
+          geom_line(linewidth = 0.8, alpha = 0.9) +
+          geom_point(size = 2.5, alpha = 0.9) +
+          labs(x = "Study Day", y = "Heart Rate (bpm)") +
+          scale_x_continuous(breaks = scales::pretty_breaks()) +
+          scale_y_continuous(breaks = scales::pretty_breaks(n = 6)) +
+          dash_theme()
+      } else {
+        chart_data <- df %>%
+          group_by(study_day) %>%
+          summarise(heart_rate_avg = mean(heart_rate_avg, na.rm = TRUE), .groups = "drop")
+        
+        p <- ggplot(chart_data, aes(x = study_day, y = heart_rate_avg)) +
+          geom_line(color = clr$hr, linewidth = 0.8, alpha = 0.9) +
+          geom_point(color = clr$hr, size = 2.5, alpha = 0.9) +
+          labs(x = "Study Day",
+               y = if (is_all) "Avg Heart Rate (bpm, all participants)" else "Heart Rate (bpm)") +
+          scale_x_continuous(breaks = scales::pretty_breaks()) +
+          scale_y_continuous(breaks = scales::pretty_breaks(n = 6)) +
+          dash_theme()
+      }
       
     } else {
       chart_data <- df %>%
@@ -1652,7 +1696,9 @@ server <- function(input, output, session) {
       layout(
         xaxis = list(tickangle = -45),
         hoverlabel = list(bgcolor = clr$bg, font = list(size = 10)),
-        margin = list(l = 50, r = 20, t = 20, b = 60)
+        legend = list(orientation = "h", xanchor = "center",
+                      x = 0.5, y = -0.5, title = list(text = "")),
+        margin = list(l = 50, r = 20, t = 20, b = 80)
       )
   })
   #-------------------------------------------end hr time series
@@ -1709,21 +1755,39 @@ server <- function(input, output, session) {
       is_all <- auth$is_admin && is.null(current_participant())
       
       if (is_all) {
-        chart_data <- df %>%
-          filter(!is.na(datetime)) %>%
-          mutate(hour_of_day = hour(datetime)) %>%
-          group_by(participantID, hour_of_day) %>%
-          summarise(avg_heart_rate = mean(heart_rate_avg, na.rm = TRUE), .groups = "drop")
+        split_view <- !is.null(input$hr_by_hour_view) && input$hr_by_hour_view == "split"
         
-        p <- ggplot(chart_data, aes(x = hour_of_day, y = avg_heart_rate,
-                                    color = participantID, group = participantID)) +
-          geom_line(linewidth = 0.8, alpha = 0.8) +
-          geom_point(size = 1.5, alpha = 0.7) +
-          labs(x = "Hour of Day", y = "Average Heart Rate (bpm)", color = "Participant") +
-          scale_x_continuous(breaks = seq(0, 23, by = 2),
-                             labels = sprintf("%02d:00", seq(0, 23, by = 2))) +
-          dash_theme() +
-          theme(axis.text.x = element_text(size = 8))
+        if (split_view) {
+          chart_data <- df %>%
+            filter(!is.na(datetime)) %>%
+            mutate(hour_of_day = hour(datetime)) %>%
+            group_by(participantID, hour_of_day) %>%
+            summarise(avg_heart_rate = mean(heart_rate_avg, na.rm = TRUE), .groups = "drop")
+          
+          p <- ggplot(chart_data, aes(x = hour_of_day, y = avg_heart_rate,
+                                      color = participantID, group = participantID)) +
+            geom_line(linewidth = 0.8, alpha = 0.8) +
+            geom_point(size = 1.5, alpha = 0.7) +
+            labs(x = "Hour of Day", y = "Average Heart Rate (bpm)") +
+            scale_x_continuous(breaks = seq(0, 23, by = 2),
+                               labels = sprintf("%02d:00", seq(0, 23, by = 2))) +
+            dash_theme() +
+            theme(axis.text.x = element_text(size = 8))
+        } else {
+          chart_data <- df %>%
+            filter(!is.na(datetime)) %>%
+            mutate(hour_of_day = hour(datetime)) %>%
+            group_by(hour_of_day) %>%
+            summarise(avg_heart_rate = mean(heart_rate_avg, na.rm = TRUE), .groups = "drop")
+          
+          p <- ggplot(chart_data, aes(x = hour_of_day, y = avg_heart_rate)) +
+            geom_col(fill = clr$hr, width = 0.7, alpha = 0.8) +
+            labs(x = "Hour of Day", y = "Avg Heart Rate (bpm, all participants)") +
+            scale_x_continuous(breaks = seq(0, 23, by = 2),
+                               labels = sprintf("%02d:00", seq(0, 23, by = 2))) +
+            dash_theme() +
+            theme(axis.text.x = element_text(size = 8))
+        }
       } else {
         chart_data <- df %>%
           filter(!is.na(datetime)) %>%
@@ -1988,6 +2052,13 @@ server <- function(input, output, session) {
   
   # Populate hypnogram night dropdown
   observe({
+    req(auth$logged_in)
+    is_all <- isTRUE(auth$is_admin) && is.null(current_participant())
+    if (is_all) {
+    shinyjs::delay(200, shinyjs::hide("hypnogram_date_container"))
+      return()
+    }
+    shinyjs::delay(200, shinyjs::show("hypnogram_date_container"))
     df <- sleep_data()
     if (is.null(df) || nrow(df) == 0) return()
     nights <- sort(unique(df$dateOfSleep), decreasing = TRUE)
@@ -2112,6 +2183,34 @@ server <- function(input, output, session) {
       is_all <- auth$is_admin && is.null(current_participant())
       
       if (is_all) {
+        split_view <- !is.null(input$sleep_efficiency_view) && 
+          input$sleep_efficiency_view == "split"
+        
+        if (split_view) {
+          eff <- df %>%
+            group_by(participantID, study_day) %>%
+            summarise(
+              efficiency = round(sum(sleep_stage != "wake") / n() * 100, 1),
+              .groups = "drop"
+            )
+          
+          p <- ggplot(eff, aes(x = study_day, y = efficiency,
+                               color = participantID, group = participantID)) +
+            geom_line(linewidth = 1) +
+            geom_point(size = 3) +
+            geom_hline(yintercept = 85, linetype = "dashed", color = clr$target_line) +
+            scale_x_continuous(breaks = scales::pretty_breaks()) +
+            scale_y_continuous(breaks = scales::pretty_breaks()) +
+            labs(x = "Study Day", y = "Efficiency (%)") +
+            dash_theme()
+          
+          return(ggplotly(p) %>%
+                   layout(hoverlabel = list(bgcolor = clr$bg),
+                          legend = list(orientation = "h", xanchor = "center",
+                                        x = 0.5, y = -0.5, title = list(text = "")),
+                          margin = list(l = 50, r = 20, t = 20, b = 80)))
+        }
+        
         eff <- df %>%
           group_by(participantID, study_day) %>%
           summarise(
@@ -2305,6 +2404,8 @@ server <- function(input, output, session) {
     has_type <- "exercise_type" %in% names(d)
     
     is_all <- auth$is_admin && is.null(current_participant())
+    split_by_participant <- is_all && !is.null(input$exercise_sessions_view) && 
+      input$exercise_sessions_view == "participant"
     
     if (has_type) {
       d <- d %>%
@@ -2349,9 +2450,11 @@ server <- function(input, output, session) {
     p <- p +
       geom_point(alpha = 0.85) +
       scale_color_identity(
-        guide  = if (has_type) "legend" else "none",
-        labels = if (has_type) names(full_color_map) else NULL,
-        breaks = if (has_type) unname(full_color_map) else NULL
+        guide  = if (split_by_participant || has_type) "legend" else "none",
+        labels = if (split_by_participant) NULL
+        else if (has_type) names(full_color_map) else NULL,
+        breaks = if (split_by_participant) NULL
+        else if (has_type) unname(full_color_map) else NULL
       ) +
       scale_size_continuous(range = c(4, 16), guide = "none") +
       scale_y_continuous(breaks = scales::pretty_breaks()) +
