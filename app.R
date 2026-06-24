@@ -1184,6 +1184,10 @@ server <- function(input, output, session) {
     paste(round(avg_spo2, 1))
   })
   
+  
+  
+  
+  
   # ==================== DYNAMIC TABS ====================
   # --- PERMISSION-WIRED: tab visibility is driven by 
   # ALL_USER_TABS / ADMIN_ONLY_TABS, see top of file ---
@@ -1427,466 +1431,76 @@ server <- function(input, output, session) {
     )
   }
   
-  # ==================== ACTIVITY TAB CHARTS ====================
+  # ================= ACTIVITY TAB =================
   
-  # Zone Minutes (Fat Burn / Cardio / Peak)
-  # Shows stacked bar chart of time spent in each heart rate zone
-  output$zone_minutes_chart <- renderPlotly({
-    req(auth$logged_in)
-    df <- zone_minutes_data()
-    if (is.null(df) || nrow(df) == 0) {
-      return(create_empty_plot("No zone minutes data available"))
-    }
+  # Activity tab: displays zone minutes, exercise sessions, sedentary periods,
+  # steps, and distance visualizations for comprehensive activity analysis
+  activity_tab_content <- function(is_admin) {
+    # Initialize chart toggle functionality for all activity charts
+    init_chart_card("zone_minutes_chart", is_admin)
+    init_chart_card("exercise_sessions_chart", is_admin)
+    init_chart_card("sedentary_chart", is_admin)
+    init_chart_card("activity_steps_chart", is_admin)
+    init_chart_card("activity_steps_by_hour", is_admin)
+    init_chart_card("activity_distance_chart", is_admin)
     
-    if (input$view_mode == "day") {
-      is_all <- auth$is_admin && is.null(current_participant())
-      
-      # Aggregate zone minutes by study day
-      chart_data <- if (is_all) {
-        df %>%
-          group_by(participantID, study_day) %>%
-          summarise(
-            fat_burn = sum(fat_burn_minutes, na.rm = TRUE),
-            cardio   = sum(cardio_minutes,   na.rm = TRUE),
-            peak     = sum(peak_minutes,     na.rm = TRUE),
-            .groups  = "drop"
-          ) %>%
-          group_by(study_day) %>%
-          summarise(
-            fat_burn = mean(fat_burn, na.rm = TRUE),
-            cardio   = mean(cardio,   na.rm = TRUE),
-            peak     = mean(peak,     na.rm = TRUE),
-            .groups  = "drop"
-          )
-      } else {
-        df %>%
-          group_by(study_day) %>%
-          summarise(
-            fat_burn = sum(fat_burn_minutes, na.rm = TRUE),
-            cardio   = sum(cardio_minutes,   na.rm = TRUE),
-            peak     = sum(peak_minutes,     na.rm = TRUE),
-            .groups  = "drop"
-          )
-      }
-      
-      plot_ly() %>%
-        add_bars(data = chart_data, x = ~study_day, y = ~fat_burn,
-                 name = "Fat Burn Zone", marker = list(color = clr$fat_burn, opacity = 0.9)) %>%
-        add_bars(data = chart_data, x = ~study_day, y = ~cardio,
-                 name = "Cardio Zone", marker = list(color = clr$cardio, opacity = 0.9)) %>%
-        add_bars(data = chart_data, x = ~study_day, y = ~peak,
-                 name = "Peak Zone", marker = list(color = clr$peak, opacity = 0.9)) %>%
-        layout(
-          barmode = "stack",
-          xaxis = list(title = "Study Day"),
-          yaxis = list(title = if (is_all) "Avg Minutes (all participants)" else "Minutes"),
-          legend = list(orientation = "h", xanchor = "center", x = 0.5,
-                        yanchor = "top", y = -0.5, title = list(text = "")),
-          hoverlabel = list(bgcolor = clr$bg),
-          margin = list(l = 50, r = 20, t = 20, b = 80)
-        )
-    } else {
-      # Date view: zone minutes by calendar date
-      chart_data <- df %>%
-        filter(!is.na(datetime)) %>%
-        mutate(date_only = as.Date(datetime)) %>%
-        group_by(date_only) %>%
-        summarise(
-          fat_burn = sum(fat_burn_minutes, na.rm = TRUE),
-          cardio   = sum(cardio_minutes,   na.rm = TRUE),
-          peak     = sum(peak_minutes,     na.rm = TRUE),
-          .groups  = "drop"
-        )
-      
-      if (nrow(chart_data) == 0) {
-        return(create_empty_plot("No zone minutes data for selected filters"))
-      }
-      
-      plot_ly() %>%
-        add_bars(data = chart_data, x = ~date_only, y = ~fat_burn,
-                 name = "Fat Burn Zone", marker = list(color = clr$fat_burn, opacity = 0.9)) %>%
-        add_bars(data = chart_data, x = ~date_only, y = ~cardio,
-                 name = "Cardio Zone", marker = list(color = clr$cardio, opacity = 0.9)) %>%
-        add_bars(data = chart_data, x = ~date_only, y = ~peak,
-                 name = "Peak Zone", marker = list(color = clr$peak, opacity = 0.9)) %>%
-        layout(
-          barmode = "stack",
-          xaxis = list(title = "Date", tickformat = "%b %d"),
-          yaxis = list(title = "Minutes"),
-          legend = list(orientation = "h", xanchor = "center", x = 0.5,
-                        yanchor = "top", y = -0.5, title = list(text = "")),
-          hoverlabel = list(bgcolor = clr$bg),
-          margin = list(l = 50, r = 20, t = 20, b = 80)
-        )
-    }
-  })
-  
-  # Exercise Sessions
-  # Shows exercise sessions as bubble chart with duration and type
-  output$exercise_sessions_chart <- renderPlotly({
-    req(auth$logged_in)
-    df <- activity_sessions_data()
-    if (is.null(df) || nrow(df) == 0) {
-      return(create_empty_plot("No exercise session data available"))
-    }
-    
-    # Calculate duration and extract date
-    d <- df %>%
-      filter(!is.na(start_datetime), !is.na(end_datetime)) %>%
-      mutate(
-        duration_min = as.numeric(difftime(end_datetime, start_datetime, units = "mins")),
-        date = as.Date(start_datetime)
-      ) %>%
-      arrange(start_datetime)
-    
-    if (input$view_mode == "day") {
-      d <- d %>% filter(!is.na(study_day))
-    }
-    
-    if (nrow(d) == 0) {
-      return(create_empty_plot("No exercise session data for selected filters"))
-    }
-    
-    # Build color mapping - known types use clr, unknown fall back to clr$steps
-    activity_color_map <- c(
-      walk    = clr$walk,
-      run     = clr$run,
-      bike    = clr$bike,
-      sport   = clr$sport,
-      workout = clr$workout,
-      swim    = clr$swim,
-      yoga    = clr$yoga
-    )
-    
-    has_type <- "exercise_type" %in% names(d)
-    
-    is_all <- auth$is_admin && is.null(current_participant())
-    split_by_participant <- is_all && !is.null(input$exercise_sessions_view) &&
-      input$exercise_sessions_view == "participant"
-    
-    full_color_map <- c(activity_color_map, other = clr$steps)
-    label_color_map <- setNames(full_color_map, tools::toTitleCase(names(full_color_map)))
-    
-    # Prepare data with hover text
-    if (has_type) {
-      d <- d %>%
-        mutate(
-          activity_type  = tolower(trimws(exercise_type)),
-          activity_label = ifelse(activity_type %in% names(activity_color_map),
-                                  activity_type, "other"),
-          color_label    = tools::toTitleCase(activity_label),
-          hover_text     = paste0(
-            if (is_all) paste0("Participant: ", participantID, "<br>") else "",
-            "Type: ", activity_type,
-            "<br>Duration: ", round(duration_min), " min",
-            "<br>Date: ", format(date, "%b %d"))
-        )
-    } else {
-      d <- d %>%
-        mutate(
-          color_label = "Other",
-          hover_text  = paste0(
-            if (is_all) paste0("Participant: ", participantID, "<br>") else "",
-            "Duration: ", round(duration_min), " min",
-            "<br>Date: ", format(date, "%b %d"))
-        )
-    }
-    
-    # Set color scale based on view mode
-    if (split_by_participant) {
-      d <- d %>%
-        mutate(color_label = participantID)
-      okabe_ito <- c(clr$hr, clr$steps, clr$deep, clr$rem, clr$light, clr$hrv, clr$green)
-      participant_ids <- unique(d$participantID)
-      participant_colors <- setNames(okabe_ito[seq_along(participant_ids)], participant_ids)
-      color_scale <- scale_color_manual(values = participant_colors, guide = "legend")
-    } else {
-      color_scale <- scale_color_manual(
-        values = label_color_map,
-        guide  = if (has_type) "legend" else "none"
+    # Build UI layout with activity visualizations
+    tagList(
+      br(),
+      fluidRow(
+        # Heart Rate Zones (Fat Burn / Cardio / Peak)
+        column(12, chart_card_ui(
+          chart_id  = "zone_minutes_chart",
+          title     = "Heart Rate Zones",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "300px"
+        ))
+      ),
+      fluidRow(
+        # Exercise Sessions
+        column(12, chart_card_ui(
+          chart_id  = "exercise_sessions_chart",
+          title     = "Exercise Sessions",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "300px"
+        ))
+      ),
+      fluidRow(
+        column(6, chart_card_ui(
+          chart_id  = "activity_steps_chart",
+          title     = "Daily Steps",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "300px"
+        )),
+        column(6, chart_card_ui(
+          chart_id  = "activity_distance_chart",
+          title     = "Daily Distance",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "300px"
+        ))
+      ),
+      fluidRow(
+        column(6, chart_card_ui(
+          chart_id  = "activity_steps_by_hour",
+          title     = "Steps by Hour of Day",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "300px"
+        )),
+        column(6, chart_card_ui(
+          chart_id  = "sedentary_chart",
+          title     = "Sedentary Time",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "300px"
+        ))
       )
-    }
-    
-    # Create plot with x-axis based on view mode
-    if (input$view_mode == "day") {
-      p <- ggplot(d, aes(x = study_day, y = duration_min,
-                         size = duration_min, color = color_label,
-                         text = hover_text)) +
-        scale_x_continuous(breaks = scales::pretty_breaks())
-    } else {
-      p <- ggplot(d, aes(x = date, y = duration_min,
-                         size = duration_min, color = color_label,
-                         text = hover_text)) +
-        scale_x_date(date_labels = "%b %d")
-    }
-    
-    p <- p +
-      geom_point(alpha = 0.85) +
-      color_scale +
-      scale_size_continuous(range = c(4, 16), guide = "none") +
-      scale_y_continuous(breaks = scales::pretty_breaks()) +
-      labs(x = if (input$view_mode == "day") "Study Day" else "Date",
-           y = "Duration (minutes)") +
-      dash_theme()
-    
-    ggplotly(p, tooltip = "text") %>%
-      layout(hoverlabel = list(bgcolor = clr$bg),
-             legend = list(orientation = "h", xanchor = "center",
-                           x = 0.5, y = -0.5, title = list(text = "")),
-             margin = list(l = 50, r = 20, t = 20, b = 80))
-  })
-  
-  # Sedentary Periods
-  # Shows total sedentary time per day
-  output$sedentary_chart <- renderPlotly({
-    req(auth$logged_in)
-    df <- sedentary_data()
-    if (is.null(df) || nrow(df) == 0) {
-      return(create_empty_plot("No sedentary data available"))
-    }
-    
-    d <- df %>%
-      filter(!is.na(duration_minutes)) %>%
-      mutate(date = as.Date(period_start))
-    
-    if (input$view_mode == "day") {
-      is_all <- auth$is_admin && is.null(current_participant())
-      
-      if (is_all) {
-        # Aggregate: average sedentary time across all participants
-        daily_sedentary <- d %>%
-          filter(!is.na(study_day)) %>%
-          group_by(participantID, study_day) %>%
-          summarise(total_minutes = sum(duration_minutes, na.rm = TRUE), .groups = "drop") %>%
-          group_by(study_day) %>%
-          summarise(total_minutes = mean(total_minutes, na.rm = TRUE), .groups = "drop")
-      } else {
-        # Single participant: sedentary time by study day
-        daily_sedentary <- d %>%
-          filter(!is.na(study_day)) %>%
-          group_by(study_day) %>%
-          summarise(total_minutes = sum(duration_minutes, na.rm = TRUE), .groups = "drop")
-      }
-      
-      p <- ggplot(daily_sedentary, aes(x = study_day, y = total_minutes)) +
-        geom_col(fill = clr$green, alpha = 0.85, width = 0.65) +
-        scale_x_continuous(breaks = scales::pretty_breaks()) +
-        scale_y_continuous(breaks = scales::pretty_breaks()) +
-        labs(x = "Study Day",
-             y = if (is_all) "Avg Minutes Sedentary (all participants)" else "Minutes Sedentary") +
-        dash_theme()
-    } else {
-      # Date view: sedentary time by calendar date
-      daily_sedentary <- d %>%
-        group_by(date) %>%
-        summarise(total_minutes = sum(duration_minutes, na.rm = TRUE), .groups = "drop")
-      
-      if (nrow(daily_sedentary) == 0) {
-        return(create_empty_plot("No sedentary data for selected filters"))
-      }
-      
-      p <- ggplot(daily_sedentary, aes(x = date, y = total_minutes)) +
-        geom_col(fill = clr$green, alpha = 0.85, width = 0.65) +
-        scale_x_date(date_labels = "%b %d") +
-        scale_y_continuous(breaks = scales::pretty_breaks()) +
-        labs(x = NULL, y = "Minutes Sedentary") +
-        dash_theme()
-    }
-    
-    ggplotly(p) %>%
-      layout(hoverlabel = list(bgcolor = clr$bg),
-             margin = list(l = 50, r = 20, t = 20, b = 40))
-  })
-  
-  # Daily Steps with Goal Line
-  # Shows daily step counts with 10,000 step target line
-  output$activity_steps_chart <- renderPlotly({
-    req(auth$logged_in)
-    df <- steps_data()
-    if (is.null(df) || nrow(df) == 0) {
-      return(create_empty_plot("No steps data available"))
-    }
-    
-    if (input$view_mode == "day") {
-      is_all <- auth$is_admin && is.null(current_participant())
-      
-      if (is_all) {
-        # Aggregate: average steps across all participants
-        daily <- df %>%
-          group_by(participantID, study_day) %>%
-          summarise(total = sum(steps_5min, na.rm = TRUE), .groups = "drop") %>%
-          group_by(study_day) %>%
-          summarise(total = mean(total, na.rm = TRUE), .groups = "drop")
-      } else {
-        # Single participant: steps by study day
-        daily <- df %>%
-          group_by(study_day) %>%
-          summarise(total = sum(steps_5min, na.rm = TRUE), .groups = "drop")
-      }
-      
-      p <- ggplot(daily, aes(x = study_day, y = total)) +
-        geom_col(fill = clr$steps, width = 0.7, alpha = 0.9) +
-        geom_hline(yintercept = 10000, linetype = "dashed",
-                   color = clr$target_line, linewidth = 0.5) +
-        scale_x_continuous(breaks = scales::pretty_breaks()) +
-        scale_y_continuous(labels = scales::comma,
-                           breaks = scales::pretty_breaks()) +
-        labs(x = "Study Day",
-             y = if (is_all) "Avg Steps (all participants)" else "Steps") +
-        dash_theme()
-    } else {
-      # Date view: steps by calendar date
-      daily <- df %>%
-        mutate(date = as.Date(date)) %>%
-        group_by(date) %>%
-        summarise(total = sum(steps_5min, na.rm = TRUE), .groups = "drop")
-      
-      if (nrow(daily) == 0) return(create_empty_plot("No steps data for selected filters"))
-      
-      p <- ggplot(daily, aes(x = date, y = total)) +
-        geom_col(fill = clr$steps, width = 0.7, alpha = 0.9) +
-        geom_hline(yintercept = 10000, linetype = "dashed",
-                   color = clr$target_line, linewidth = 0.5) +
-        scale_x_date(date_labels = "%b %d") +
-        scale_y_continuous(labels = scales::comma,
-                           breaks = scales::pretty_breaks()) +
-        labs(x = NULL, y = "Steps") +
-        dash_theme()
-    }
-    
-    ggplotly(p) %>%
-      layout(hoverlabel = list(bgcolor = clr$bg),
-             margin = list(l = 50, r = 20, t = 20, b = 40))
-  })
-  
-  # Steps by Hour of Day
-  # Shows daily step patterns across hours
-  output$activity_steps_by_hour <- renderPlotly({
-    req(auth$logged_in)
-    df <- steps_data()
-    if (is.null(df) || nrow(df) == 0) {
-      return(create_empty_plot("No steps data available"))
-    }
-    
-    if (input$view_mode == "day") {
-      is_all <- auth$is_admin && is.null(current_participant())
-      
-      if (is_all) {
-        # Aggregate: average steps by hour across all participants
-        hourly <- df %>%
-          filter(!is.na(study_day)) %>%
-          mutate(hour = hour(datetime)) %>%
-          group_by(participantID, hour) %>%
-          summarise(avg = mean(steps_5min, na.rm = TRUE), .groups = "drop")
-        
-        p <- ggplot(hourly, aes(x = hour, y = avg,
-                                color = participantID,
-                                group = participantID)) +
-          geom_line(linewidth = 0.8, alpha = 0.8) +
-          scale_x_continuous(breaks = c(0, 6, 12, 18, 23),
-                             labels = c("12am", "6am", "12pm", "6pm", "11pm")) +
-          scale_y_continuous(breaks = scales::pretty_breaks()) +
-          labs(x = "Hour of Day", y = "Avg Steps") +
-          dash_theme()
-      } else {
-        # Single participant: steps by hour colored by study day
-        hourly <- df %>%
-          filter(!is.na(study_day)) %>%
-          mutate(hour = hour(datetime)) %>%
-          group_by(study_day, hour) %>%
-          summarise(avg = mean(steps_5min, na.rm = TRUE), .groups = "drop")
-        
-        p <- ggplot(hourly, aes(x = hour, y = avg,
-                                color = factor(study_day),
-                                group = factor(study_day))) +
-          geom_line(linewidth = 0.8, alpha = 0.8) +
-          scale_x_continuous(breaks = c(0, 6, 12, 18, 23),
-                             labels = c("12am", "6am", "12pm", "6pm", "11pm")) +
-          scale_y_continuous(breaks = scales::pretty_breaks()) +
-          labs(x = "Hour of Day", y = "Avg Steps", color = "Study Day") +
-          dash_theme()
-      }
-    } else {
-      # Date view: average steps by hour across all dates
-      hourly <- df %>%
-        mutate(hour = hour(datetime)) %>%
-        group_by(hour) %>%
-        summarise(avg = mean(steps_5min, na.rm = TRUE), .groups = "drop")
-      
-      if (nrow(hourly) == 0) return(create_empty_plot("No steps data for selected filters"))
-      
-      p <- ggplot(hourly, aes(x = hour, y = avg)) +
-        geom_col(fill = clr$steps, alpha = 0.85, width = 0.8) +
-        scale_x_continuous(breaks = c(0, 6, 12, 18, 23),
-                           labels = c("12am", "6am", "12pm", "6pm", "11pm")) +
-        scale_y_continuous(breaks = scales::pretty_breaks()) +
-        labs(x = "Hour of Day", y = "Avg Steps") +
-        dash_theme()
-    }
-    
-    ggplotly(p) %>%
-      layout(hoverlabel = list(bgcolor = clr$bg),
-             legend = list(orientation = "h", xanchor = "center",
-                           x = 0.5, y = -0.5, title = list(text = "")),
-             margin = list(l = 50, r = 20, t = 20, b = 80))
-  })
-  
-  # Distance per Day
-  # Shows daily distance in meters
-  output$activity_distance_chart <- renderPlotly({
-    req(auth$logged_in)
-    df <- filtered_data_by_day()[["distance_intraday"]]
-    if (is.null(df) || nrow(df) == 0) {
-      return(create_empty_plot("No distance data available"))
-    }
-    
-    if (input$view_mode == "day") {
-      is_all <- auth$is_admin && is.null(current_participant())
-      
-      if (is_all) {
-        # Aggregate: average distance across all participants
-        daily <- df %>%
-          filter(!is.na(study_day)) %>%
-          group_by(participantID, study_day) %>%
-          summarise(total = sum(distance_meters, na.rm = TRUE), .groups = "drop") %>%
-          group_by(study_day) %>%
-          summarise(total = mean(total, na.rm = TRUE), .groups = "drop")
-      } else {
-        # Single participant: distance by study day
-        daily <- df %>%
-          filter(!is.na(study_day)) %>%
-          group_by(study_day) %>%
-          summarise(total = sum(distance_meters, na.rm = TRUE), .groups = "drop")
-      }
-      
-      p <- ggplot(daily, aes(x = study_day, y = total)) +
-        geom_col(fill = clr$calories, width = 0.65, alpha = 0.85) +
-        scale_x_continuous(breaks = scales::pretty_breaks()) +
-        scale_y_continuous(breaks = scales::pretty_breaks()) +
-        labs(x = "Study Day",
-             y = if (is_all) "Avg Meters (all participants)" else "Meters") +
-        dash_theme()
-    } else {
-      # Date view: distance by calendar date
-      daily <- df %>%
-        mutate(date = as.Date(date)) %>%
-        group_by(date) %>%
-        summarise(total = sum(distance_meters, na.rm = TRUE), .groups = "drop")
-      
-      if (nrow(daily) == 0) return(create_empty_plot("No distance data for selected filters"))
-      
-      p <- ggplot(daily, aes(x = date, y = total)) +
-        geom_col(fill = clr$calories, width = 0.65, alpha = 0.85) +
-        scale_x_date(date_labels = "%b %d") +
-        scale_y_continuous(breaks = scales::pretty_breaks()) +
-        labs(x = NULL, y = "Meters") +
-        dash_theme()
-    }
-    
-    ggplotly(p) %>%
-      layout(hoverlabel = list(bgcolor = clr$bg),
-             margin = list(l = 50, r = 20, t = 20, b = 40))
-  })
+    )
+  }
   
   # ================= INSIGHTS Tab =================
   
@@ -1898,6 +1512,7 @@ server <- function(input, output, session) {
     init_metric_card("insight_most_active_card", is_admin)
     init_metric_card("insight_bedtime_card", is_admin)
     init_chart_card("weekday_sleep_chart", is_admin)
+    init_chart_card("weekday_steps_chart", is_admin)  # ← Add this line
     # Admin-only insights charts
     if (is_admin) {
       init_chart_card("weekday_hrv_chart", is_admin)
