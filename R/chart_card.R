@@ -51,48 +51,6 @@
 #
 # ==============================================================================
 
-
-# ==============================================================================
-# CHART_INFO
-# ==============================================================================
-# Popover content for every chart and metric card, keyed by chart_id / card_id.
-# Organized in tab order (top-down, left-to-right within each tab) matching
-# the dashboard layout:
-#
-#   Overview tab:
-#     KPI cards: kpi_hr, kpi_steps, kpi_sleep, kpi_spo2
-#     Charts:    plot_hr, plot_steps, plot_sleep
-#
-#   Heart Rate tab:
-#     Charts:    hr_timeseries, hr_distribution, hr_by_hour, hrv_chart
-#
-#   Sleep tab:
-#     Charts:    sleep_duration, sleep_stage_pie, breathing_rate_chart,
-#                hypnogram_chart, sleep_efficiency_chart
-#
-#   Activity tab:
-#     Charts:    zone_minutes_chart, exercise_sessions_chart, sedentary_chart,
-#                activity_steps_chart, activity_steps_by_hour,
-#                activity_distance_chart
-#
-#   Insights tab:
-#     Metric cards: insight_best_sleep_card, insight_most_active_card,
-#                   insight_bedtime_card
-#     Charts:       weekday_sleep_chart, weekday_steps_chart,
-#                   weekday_hrv_chart (admin only), weekday_hr_chart (admin only)
-#
-#   Projections tab:
-#     Charts:    hrv_sleep_chart
-#
-#   Analysis tab (admin only):
-#     Charts:    admin_hr_comparison, admin_steps_comparison,
-#                admin_completeness_heatmap, admin_summary_table
-#
-#   Data View tab (admin only):
-#     Charts:    data_view_table
-#
-# ==============================================================================
-
 CHART_INFO <- list(
   
   
@@ -944,6 +902,30 @@ CHART_INFO <- list(
     ")
   ),
   
+  hrv_sleep_lag_chart = HTML("
+    <b>What this shows:</b><br>
+    Explores whether sleep and HRV influence each other across days
+    using a 1-day lag analysis. Three relationship types are plotted:<br><br>
+    <b>Same Day</b> (circles):<br>
+    Sleep duration vs HRV on the same date — are they correlated
+    within the same day?<br>
+    <b>Sleep → HRV</b> (squares):<br>
+    Previous night's sleep vs today's HRV. Tests whether better
+    sleep predicts better autonomic recovery the next day.<br>
+    <b>HRV → Sleep</b> (diamonds):<br>
+    Previous day's HRV vs tonight's sleep. Tests whether better
+    recovery predicts longer sleep the following night.<br><br>
+    <b>Data sources:</b><br>
+    hrv_intraday.csv + sleep_minute.csv, joined by participant and date<br><br>
+    <b>Admin-only chart.</b><br><br>
+    <b>All Participants:</b><br>
+    All participant-days pooled together. Hover for participant ID.<br><br>
+    <b>Interpretation:</b><br>
+    An upward slope indicates a positive relationship. Compare the
+    three marker shapes to see which temporal direction shows the
+    strongest pattern. Days following stressful events may show
+    compressed clusters with lower HRV regardless of sleep duration.
+  "),
   
   # ============================================================================
   # ANALYSIS TAB — CHARTS (admin-only tab)

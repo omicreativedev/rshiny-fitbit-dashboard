@@ -68,6 +68,7 @@ ADMIN_ONLY_CHARTS <- c(
   "hrv_daily_chart",
   "hrv_heatmap_chart",
   "hr_heatmap_chart",
+  "hrv_sleep_lag_chart",
   "weekday_hrv_chart",
   "weekday_hr_chart"
 )
@@ -355,13 +356,21 @@ create_empty_plot <- function(message) {
 # custom.css file
 ui <- fluidPage(
   title = "Simmons University | FitBit Research Dashboard",
+  
   theme = bslib::bs_theme(version = 5) |>
     bslib::bs_add_rules("
     .popover-header {
       background-color: #8da3c0;
       color: #ffffff;
     }
+    .popover-body {
+      font-size: 10pt !important;
+    }
+    .popover {
+      max-width: 400px !important;
+    }
   "),
+  
   useShinyjs(),
   
   tags$head(
@@ -1758,7 +1767,19 @@ server <- function(input, output, session) {
           is_admin  = is_admin,
           height    = "450px"
         ))
-      )
+      ),
+      if (is_admin || !("hrv_sleep_lag_chart" %in% ADMIN_ONLY_CHARTS)) {
+        init_chart_card("hrv_sleep_lag_chart", is_admin)
+        fluidRow(
+          column(12, chart_card_ui(
+            chart_id  = "hrv_sleep_lag_chart",
+            title     = "HRV vs Sleep: Lag Analysis",
+            output_fn = plotlyOutput,
+            is_admin  = is_admin,
+            height    = "450px"
+          ))
+        )
+      }
     )
   }
   
@@ -4280,6 +4301,159 @@ server <- function(input, output, session) {
           width    = 800,
           height   = 600,
           scale    = 3
+        )
+      )
+  })
+  
+  # HRV vs Sleep Lag Analysis (Admin Only)
+  # Scatter plot exploring temporal relationships between sleep and HRV:
+  #   - Same day: does more sleep correlate with higher HRV that day?
+  #   - Sleep → HRV: does last night's sleep predict today's HRV?
+  #   - HRV → Sleep: does today's HRV predict tonight's sleep?
+  # Individual view: one participant's data with three marker types.
+  # All Participants: all participant-days pooled with three marker types.
+  output$hrv_sleep_lag_chart <- renderPlotly({
+    req(auth$logged_in, auth$is_admin)
+    df_hrv <- filtered_data_by_day()[["hrv_intraday"]]
+    df_sleep <- sleep_data()
+    
+    if (is.null(df_hrv) || nrow(df_hrv) == 0 ||
+        is.null(df_sleep) || nrow(df_sleep) == 0) {
+      return(create_empty_plot("Sleep or HRV data not available"))
+    }
+    
+    is_all <- auth$is_admin && is.null(current_participant())
+    
+    # Daily sleep minutes per participant per night
+    sleep_daily <- df_sleep %>%
+      filter(sleep_stage %in% c("deep", "rem", "light", "wake")) %>%
+      group_by(participantID, dateOfSleep) %>%
+      summarise(total_sleep_minutes = n(), .groups = "drop") %>%
+      rename(date = dateOfSleep) %>%
+      mutate(date = as.Date(date))
+    
+    # Daily HRV average per participant
+    hrv_daily <- df_hrv %>%
+      filter(!is.na(rmssd_ms)) %>%
+      mutate(date = as.Date(substr(timestamp, 1, 10))) %>%
+      group_by(participantID, date) %>%
+      summarise(hrv_avg = mean(rmssd_ms, na.rm = TRUE), .groups = "drop")
+    
+    # Join and create lag variables per participant
+    merged <- sleep_daily %>%
+      inner_join(hrv_daily, by = c("participantID", "date")) %>%
+      filter(!is.na(total_sleep_minutes), !is.na(hrv_avg)) %>%
+      arrange(participantID, date) %>%
+      group_by(participantID) %>%
+      mutate(
+        sleep_lag1 = lag(total_sleep_minutes, 1),
+        hrv_lag1 = lag(hrv_avg, 1)
+      ) %>%
+      ungroup()
+    
+    if (nrow(merged) == 0) {
+      return(create_empty_plot("No overlapping sleep and HRV data"))
+    }
+    
+    # Build three traces
+    p <- plot_ly()
+    
+    # Trace 1: Same day — sleep vs HRV on same date
+    p <- p %>%
+      add_trace(
+        data = merged,
+        x = ~total_sleep_minutes,
+        y = ~hrv_avg,
+        type = "scatter",
+        mode = "markers",
+        name = "Same Day",
+        marker = list(color = clr$hr, size = 10, opacity = 0.7, symbol = "circle"),
+        text = ~paste0(
+          if (is_all) paste0("Participant: ", participantID, "<br>") else "",
+          "Date: ", format(date, "%b %d"),
+          "<br>Sleep: ", total_sleep_minutes, " min",
+          "<br>HRV: ", round(hrv_avg, 1), " ms"
+        ),
+        hoverinfo = "text"
+      )
+    
+    # Trace 2: Sleep → HRV (previous night's sleep vs today's HRV)
+    lag_data_sleep <- merged %>% filter(!is.na(sleep_lag1))
+    if (nrow(lag_data_sleep) > 0) {
+      p <- p %>%
+        add_trace(
+          data = lag_data_sleep,
+          x = ~sleep_lag1,
+          y = ~hrv_avg,
+          type = "scatter",
+          mode = "markers",
+          name = "Sleep → HRV (1-day lag)",
+          marker = list(color = clr$deep, size = 10, opacity = 0.7, symbol = "square"),
+          text = ~paste0(
+            if (is_all) paste0("Participant: ", participantID, "<br>") else "",
+            "Sleep date: ", format(date - 1, "%b %d"),
+            "<br>Sleep: ", sleep_lag1, " min",
+            "<br>Next day HRV: ", round(hrv_avg, 1), " ms"
+          ),
+          hoverinfo = "text"
+        )
+    }
+    
+    # Trace 3: HRV → Sleep (previous day's HRV vs tonight's sleep)
+    lag_data_hrv <- merged %>% filter(!is.na(hrv_lag1))
+    if (nrow(lag_data_hrv) > 0) {
+      p <- p %>%
+        add_trace(
+          data = lag_data_hrv,
+          x = ~total_sleep_minutes,
+          y = ~hrv_lag1,
+          type = "scatter",
+          mode = "markers",
+          name = "HRV → Sleep (1-day lag)",
+          marker = list(color = clr$green, size = 10, opacity = 0.7, symbol = "diamond"),
+          text = ~paste0(
+            if (is_all) paste0("Participant: ", participantID, "<br>") else "",
+            "HRV date: ", format(date - 1, "%b %d"),
+            "<br>HRV: ", round(hrv_lag1, 1), " ms",
+            "<br>Next day sleep: ", total_sleep_minutes, " min"
+          ),
+          hoverinfo = "text"
+        )
+    }
+    
+    # Calculate axis ranges
+    all_sleep <- c(merged$total_sleep_minutes,
+                   lag_data_sleep$sleep_lag1)
+    all_hrv <- c(merged$hrv_avg,
+                 if (nrow(lag_data_hrv) > 0) lag_data_hrv$hrv_lag1 else NULL)
+    
+    p %>%
+      layout(
+        xaxis = list(
+          title = "Sleep (minutes)",
+          range = c(0, max(all_sleep, na.rm = TRUE) * 1.05)
+        ),
+        yaxis = list(
+          title = if (is_all) "Avg HRV (RMSSD ms, all participants)" else "HRV (RMSSD ms)",
+          range = c(0, max(all_hrv, na.rm = TRUE) * 1.1)
+        ),
+        margin = list(l = 50, r = 20, t = 20, b = 80),
+        hoverlabel = list(bgcolor = clr$bg),
+        legend = list(
+          orientation = "h",
+          xanchor = "center",
+          x = 0.5,
+          y = -0.5,
+          title = list(text = "")
+        )
+      ) %>%
+      config(
+        toImageButtonOptions = list(
+          format = "png",
+          filename = "hrv_sleep_lag",
+          width = 800,
+          height = 600,
+          scale = 3
         )
       )
   })
