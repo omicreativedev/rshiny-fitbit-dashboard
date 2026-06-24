@@ -904,11 +904,10 @@ CHART_INFO <- list(
   
   hrv_sleep_lag_chart = HTML("
     <b>What this shows:</b><br>
-    Explores whether sleep and HRV influence each other across days
-    using a 1-day lag analysis. Three relationship types are plotted:<br><br>
+    Explores how sleep and HRV influence each other across days
+    using a 1-day lag analysis. Three relationship types are plotted:<br>
     <b>Same Day</b> (circles):<br>
-    Sleep duration vs HRV on the same date — are they correlated
-    within the same day?<br>
+    Sleep duration vs HRV on the same date.<br>
     <b>Sleep → HRV</b> (squares):<br>
     Previous night's sleep vs today's HRV. Tests whether better
     sleep predicts better autonomic recovery the next day.<br>
@@ -917,7 +916,6 @@ CHART_INFO <- list(
     recovery predicts longer sleep the following night.<br><br>
     <b>Data sources:</b><br>
     hrv_intraday.csv + sleep_minute.csv, joined by participant and date<br><br>
-    <b>Admin-only chart.</b><br><br>
     <b>All Participants:</b><br>
     All participant-days pooled together. Hover for participant ID.<br><br>
     <b>Interpretation:</b><br>
