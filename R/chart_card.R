@@ -577,6 +577,37 @@ CHART_INFO <- list(
     ")
   ),
   
+  spo2_chart = list(
+    user = HTML("
+      <b>What this shows:</b><br>
+      Your blood oxygen saturation (SpO2) recorded during sleep each night.
+      The line shows your nightly average, the shaded area shows the range
+      between your lowest and highest readings, and the error bars show
+      the standard deviation (how much readings varied).<br><br>
+      <b>Data source:</b><br>
+      Fitbit SpO2 sensor (recorded overnight during sleep)<br><br>
+      <b>Reference line:</b><br>
+      The dashed line at 95% is the clinical normal threshold. Consistently
+      healthy SpO2 is 95–100%. Readings below 90% may warrant medical
+      attention and could indicate sleep-disordered breathing.<br><br>
+      <b>Note:</b><br>
+      Nights with fewer than 5 SpO2 readings are excluded.
+    "),
+    admin = HTML("
+      <b>What this shows:</b><br>
+      Daily SpO2 summary: average with min-max range ribbon and ±1 SD
+      error bars. The 95% reference line marks the clinical normal threshold.<br><br>
+      <b>Data source:</b><br>
+      spo2_intraday.csv (recorded during sleep)<br><br>
+      <b>Filters:</b><br>
+      Values between 70–100% only. Nights with fewer than 5 readings excluded.<br><br>
+      <b>All Participants mode:</b><br>
+      Average SpO2 per participant per study day, then averaged across
+      participants. Min-max range reflects the extremes across all
+      participants. SD reflects between-participant variation.
+    ")
+  ),
+  
   # ============================================================================
   # ACTIVITY TAB — CHARTS
   # Side by side: zone_minutes_chart (left), exercise_sessions_chart (right).

@@ -1401,6 +1401,7 @@ server <- function(input, output, session) {
     init_chart_card("hypnogram_chart", is_admin)
     init_chart_card("sleep_latency_chart", is_admin)
     init_chart_card("sleep_efficiency_chart", is_admin)
+    init_chart_card("spo2_chart", is_admin)
     # add additional init_chart_card here
     
     # Build UI layout with sleep visualizations
@@ -1452,6 +1453,15 @@ server <- function(input, output, session) {
           output_fn = plotlyOutput,
           is_admin  = is_admin,
           height    = "350px"
+        ))
+      ),
+      fluidRow(
+        column(12, chart_card_ui(
+          chart_id  = "spo2_chart",
+          title     = "Blood Oxygen Saturation (SpO2)",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "300px"
         ))
       ),
       fluidRow(
@@ -3159,6 +3169,133 @@ server <- function(input, output, session) {
           margin = list(l = 50, r = 20, t = 20, b = 60)
         )
     }
+  })
+  
+  # SpO2 Over Time
+  # Shows daily blood oxygen saturation with min-max range and SD error bars.
+  # Individual view: date or study day on x-axis.
+  # All Participants: averaged across participants by study day.
+  output$spo2_chart <- renderPlotly({
+    req(auth$logged_in)
+    df <- spo2_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No SpO2 data available"))
+    }
+    
+    is_all <- auth$is_admin && is.null(current_participant())
+    
+    if (input$view_mode == "day") {
+      if (is_all) {
+        # All Participants: average per participant per study day, then across participants
+        spo2_daily <- df %>%
+          filter(!is.na(value), !is.na(study_day)) %>%
+          group_by(participantID, study_day) %>%
+          summarise(
+            participant_avg = mean(value, na.rm = TRUE),
+            participant_min = min(value, na.rm = TRUE),
+            participant_max = max(value, na.rm = TRUE),
+            .groups = "drop"
+          ) %>%
+          group_by(study_day) %>%
+          summarise(
+            avg_spo2 = mean(participant_avg, na.rm = TRUE),
+            min_spo2 = min(participant_min, na.rm = TRUE),
+            max_spo2 = max(participant_max, na.rm = TRUE),
+            sd_spo2 = sd(participant_avg, na.rm = TRUE),
+            .groups = "drop"
+          ) %>%
+          mutate(sd_spo2 = replace_na(sd_spo2, 0))
+        
+        x_col <- ~study_day
+        x_title <- "Study Day"
+        x_format <- NULL
+        y_label <- "Avg SpO2 (%, all participants)"
+      } else {
+        # Individual: by study day
+        spo2_daily <- df %>%
+          filter(!is.na(value), !is.na(study_day)) %>%
+          group_by(study_day) %>%
+          summarise(
+            avg_spo2 = mean(value, na.rm = TRUE),
+            min_spo2 = min(value, na.rm = TRUE),
+            max_spo2 = max(value, na.rm = TRUE),
+            sd_spo2 = sd(value, na.rm = TRUE),
+            n = n(),
+            .groups = "drop"
+          ) %>%
+          filter(n >= 5) %>%
+          mutate(sd_spo2 = replace_na(sd_spo2, 0))
+        
+        x_col <- ~study_day
+        x_title <- "Study Day"
+        x_format <- NULL
+        y_label <- "SpO2 (%)"
+      }
+    } else {
+      # Date view (individual only — All Participants forces day mode)
+      spo2_daily <- df %>%
+        filter(!is.na(value), !is.na(datetime)) %>%
+        mutate(date_only = as.Date(datetime)) %>%
+        group_by(date_only) %>%
+        summarise(
+          avg_spo2 = mean(value, na.rm = TRUE),
+          min_spo2 = min(value, na.rm = TRUE),
+          max_spo2 = max(value, na.rm = TRUE),
+          sd_spo2 = sd(value, na.rm = TRUE),
+          n = n(),
+          .groups = "drop"
+        ) %>%
+        filter(n >= 5) %>%
+        mutate(sd_spo2 = replace_na(sd_spo2, 0))
+      
+      x_col <- ~date_only
+      x_title <- NULL
+      x_format <- "%b %d"
+      y_label <- "SpO2 (%)"
+    }
+    
+    if (nrow(spo2_daily) == 0) {
+      return(create_empty_plot("No daily SpO2 data available (needs at least 5 readings per day)"))
+    }
+    
+    # Build ggplot with ribbon and reference line
+    if (input$view_mode == "day" || is_all) {
+      x_var <- "study_day"
+      p <- ggplot(spo2_daily, aes(x = study_day)) +
+        scale_x_continuous(breaks = scales::pretty_breaks())
+    } else {
+      x_var <- "date_only"
+      p <- ggplot(spo2_daily, aes(x = date_only)) +
+        scale_x_date(date_labels = "%b %d")
+    }
+    
+    p <- p +
+      geom_ribbon(aes(ymin = min_spo2, ymax = max_spo2),
+                  fill = clr$light, alpha = 0.3) +
+      geom_line(aes(y = avg_spo2), color = clr$deep, linewidth = 0.8) +
+      geom_point(aes(y = avg_spo2), color = clr$deep, size = 3, alpha = 0.9) +
+      geom_errorbar(aes(ymin = avg_spo2 - sd_spo2,
+                        ymax = avg_spo2 + sd_spo2),
+                    width = 0.3, color = clr$error_bar, linewidth = 0.4) +
+      geom_hline(yintercept = 95, linetype = "dashed",
+                 color = clr$target_line, linewidth = 0.5) +
+      scale_y_continuous(breaks = scales::pretty_breaks(),
+                         limits = c(min(spo2_daily$min_spo2, 88),
+                                    max(spo2_daily$max_spo2, 100))) +
+      labs(x = x_title, y = y_label) +
+      dash_theme()
+    
+    ggplotly(p, tooltip = c("x", "y")) %>%
+      layout(
+        hoverlabel = list(bgcolor = clr$bg),
+        margin = list(l = 50, r = 20, t = 20, b = 40),
+        annotations = list(
+          list(x = 1, y = 95, xref = "paper", yref = "y",
+               text = "Normal (95%)", showarrow = FALSE,
+               xanchor = "right",
+               font = list(color = clr$target_line, size = 10))
+        )
+      )
   })
   
   # ==================== ACTIVITY TAB CHARTS ====================
