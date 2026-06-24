@@ -378,6 +378,49 @@ CHART_INFO <- list(
     Cohort average RMSSD per study day (y-axis label updates accordingly).
   "),
   
+  hrv_daily_chart = HTML("
+    <b>What this shows:</b><br>
+    Daily average HRV (RMSSD) with a standard deviation ribbon showing
+    the spread of readings within each day. The dashed line at 20 ms
+    is a general baseline reference — values consistently below this
+    may indicate elevated physiological stress.<br><br>
+    <b>Data source:</b><br>
+    hrv_intraday.csv (averaged to one value per day)<br><br>
+    <b>Admin-only chart.</b><br><br>
+    <b>All Participants mode:</b><br>
+    Individual participant lines shown in color with a bold cohort
+    average line overlaid. The shaded ribbon represents ±1 SD across
+    participants per study day. All participants are aligned by study day.
+  "),
+  
+  hrv_heatmap_chart = HTML("
+    <b>What this shows:</b><br>
+    HRV (RMSSD) by hour of day across dates, displayed as a color-coded
+    heatmap. Darker colors indicate lower HRV; greener colors indicate
+    higher HRV. Useful for identifying circadian patterns — when during
+    the day is autonomic recovery highest or lowest.<br><br>
+    <b>Data source:</b><br>
+    hrv_intraday.csv<br><br>
+    <b>Admin-only chart.</b><br><br>
+    <b>All Participants mode:</b><br>
+    Averaged across participants by study day and hour. Y-axis switches
+    from calendar date to study day for alignment.
+  "),
+  
+  hr_heatmap_chart = HTML("
+    <b>What this shows:</b><br>
+    Heart rate by hour of day across dates, displayed as a color-coded
+    heatmap. Cooler colors indicate lower HR; warmer colors (orange, red)
+    indicate higher HR. Reveals daily activity and rest patterns at a
+    glance — sleep hours should show lower HR, active hours higher.<br><br>
+    <b>Data source:</b><br>
+    hr_intraday_5m.csv<br><br>
+    <b>Admin-only chart.</b><br><br>
+    <b>All Participants mode:</b><br>
+    Averaged across participants by study day and hour. Y-axis switches
+    from calendar date to study day for alignment.
+  "),
+  
   
   # ============================================================================
   # SLEEP TAB — CHARTS

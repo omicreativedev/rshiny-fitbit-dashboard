@@ -64,9 +64,13 @@ ADMIN_ONLY_TABS <- c(
 # (but harmless, in case a chart later moves to a shared tab).
 ADMIN_ONLY_CHARTS <- c(
   "hrv_chart",
+  "hrv_daily_chart",
+  "hrv_heatmap_chart",
+  "hr_heatmap_chart",
   "weekday_hrv_chart",
   "weekday_hr_chart"
 )
+
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -1296,19 +1300,14 @@ server <- function(input, output, session) {
   
   # ================= Heart Rate Tab =================
   
-  # Heart Rate tab: displays time series, distribution, hourly patterns, and HRV charts
   heart_rate_tab_content <- function(is_admin) {
-    # Initialize chart toggle functionality for all heart rate charts
     init_chart_card("hr_timeseries", is_admin)
     init_chart_card("hr_distribution", is_admin)
     init_chart_card("hr_by_hour", is_admin)
-    # add additional init_chart_card here
     
-    # Build UI layout with heart rate visualizations
     tagList(
       br(),
       fluidRow(
-        # Heart Rate Time Series (with admin toggle for aggregate/split view)
         column(12, chart_card_ui(
           chart_id  = "hr_timeseries",
           title     = "Heart Rate Time Series",
@@ -1322,7 +1321,6 @@ server <- function(input, output, session) {
           }
         ))
       ),
-      # Heart Rate Distribution and Hourly Patterns
       fluidRow(
         column(6, chart_card_ui(
           chart_id  = "hr_distribution",
@@ -1331,7 +1329,6 @@ server <- function(input, output, session) {
           is_admin  = is_admin,
           height    = "300px"
         )),
-        # Heart Rate by Hour of Day (with admin toggle for aggregate/split view)
         column(6, chart_card_ui(
           chart_id  = "hr_by_hour",
           title     = "Heart Rate by Hour of Day",
@@ -1345,7 +1342,6 @@ server <- function(input, output, session) {
           }
         ))
       ),
-      # Heart Rate Variability (conditional on admin permissions or accessible to all)
       if (is_admin || !("hrv_chart" %in% ADMIN_ONLY_CHARTS)) {
         init_chart_card("hrv_chart", is_admin)
         fluidRow(
@@ -1355,6 +1351,38 @@ server <- function(input, output, session) {
             output_fn = plotlyOutput,
             is_admin  = is_admin,
             height    = "300px"
+          ))
+        )
+      },
+      if (is_admin || !("hrv_daily_chart" %in% ADMIN_ONLY_CHARTS)) {
+        init_chart_card("hrv_daily_chart", is_admin)
+        fluidRow(
+          column(12, chart_card_ui(
+            chart_id  = "hrv_daily_chart",
+            title     = "HRV Daily Summary",
+            output_fn = plotlyOutput,
+            is_admin  = is_admin,
+            height    = "350px"
+          ))
+        )
+      },
+      if (is_admin || !("hrv_heatmap_chart" %in% ADMIN_ONLY_CHARTS)) {
+        init_chart_card("hrv_heatmap_chart", is_admin)
+        init_chart_card("hr_heatmap_chart", is_admin)
+        fluidRow(
+          column(6, chart_card_ui(
+            chart_id  = "hrv_heatmap_chart",
+            title     = "HRV Heatmap",
+            output_fn = plotlyOutput,
+            is_admin  = is_admin,
+            height    = "350px"
+          )),
+          column(6, chart_card_ui(
+            chart_id  = "hr_heatmap_chart",
+            title     = "Heart Rate Heatmap",
+            output_fn = plotlyOutput,
+            is_admin  = is_admin,
+            height    = "350px"
           ))
         )
       }
@@ -2132,6 +2160,7 @@ server <- function(input, output, session) {
   output$hrv_chart <- renderPlotly({
     req(auth$logged_in)
     df <- hrv_data()
+    
     if (is.null(df) || nrow(df) == 0) {
       return(create_empty_plot("No HRV data available"))
     }
@@ -2168,6 +2197,344 @@ server <- function(input, output, session) {
              margin = list(l = 50, r = 20, t = 20, b = 40))
   })
   
+  # HRV Daily Summary (Admin Only)
+  # Shows daily average HRV (RMSSD) with standard deviation ribbon.
+  # Individual view: single participant's daily HRV trend.
+  # All Participants: one line per participant, plus a cohort average line,
+  # aligned by study day.
+  output$hrv_daily_chart <- renderPlotly({
+    req(auth$logged_in, auth$is_admin)
+    df <- hrv_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No HRV data available"))
+    }
+    
+    is_all <- auth$is_admin && is.null(current_participant())
+    
+    if (is_all) {
+      # All Participants: daily avg per participant, then overlay + cohort mean
+      daily <- df %>%
+        filter(!is.na(rmssd_ms), !is.na(study_day)) %>%
+        group_by(participantID, study_day) %>%
+        summarise(avg_rmssd = mean(rmssd_ms, na.rm = TRUE), .groups = "drop")
+      
+      cohort <- daily %>%
+        group_by(study_day) %>%
+        summarise(avg_rmssd = mean(avg_rmssd, na.rm = TRUE),
+                  sd_rmssd = sd(avg_rmssd, na.rm = TRUE),
+                  .groups = "drop") %>%
+        mutate(sd_rmssd = replace_na(sd_rmssd, 0))
+      
+      # Individual participant lines
+      p <- ggplot() +
+        geom_ribbon(data = cohort,
+                    aes(x = study_day,
+                        ymin = avg_rmssd - sd_rmssd,
+                        ymax = avg_rmssd + sd_rmssd),
+                    fill = clr$hrv, alpha = 0.15) +
+        geom_line(data = daily,
+                  aes(x = study_day, y = avg_rmssd,
+                      color = participantID, group = participantID),
+                  linewidth = 0.6, alpha = 0.6) +
+        geom_point(data = daily,
+                   aes(x = study_day, y = avg_rmssd,
+                       color = participantID),
+                   size = 2, alpha = 0.6) +
+        geom_line(data = cohort,
+                  aes(x = study_day, y = avg_rmssd),
+                  color = clr$text_primary, linewidth = 1.2) +
+        geom_point(data = cohort,
+                   aes(x = study_day, y = avg_rmssd),
+                   color = clr$text_primary, size = 3) +
+        geom_hline(yintercept = 20, linetype = "dashed",
+                   color = clr$target_line, linewidth = 0.5) +
+        scale_x_continuous(breaks = scales::pretty_breaks()) +
+        scale_y_continuous(breaks = scales::pretty_breaks()) +
+        labs(x = "Study Day", y = "Avg Daily RMSSD (ms)") +
+        dash_theme()
+      
+      ggplotly(p, tooltip = c("x", "y", "colour")) %>%
+        layout(
+          hoverlabel = list(bgcolor = clr$bg),
+          legend = list(orientation = "h", xanchor = "center",
+                        x = 0.5, y = -0.5, title = list(text = "")),
+          margin = list(l = 50, r = 20, t = 20, b = 80),
+          annotations = list(
+            list(x = 1, y = 20, xref = "paper", yref = "y",
+                 text = "Baseline (20 ms)", showarrow = FALSE,
+                 xanchor = "right",
+                 font = list(color = clr$target_line, size = 10))
+          )
+        )
+      
+    } else {
+      # Individual participant view
+      if (input$view_mode == "day") {
+        daily <- df %>%
+          filter(!is.na(rmssd_ms), !is.na(study_day)) %>%
+          group_by(study_day) %>%
+          summarise(
+            avg_rmssd = mean(rmssd_ms, na.rm = TRUE),
+            sd_rmssd = sd(rmssd_ms, na.rm = TRUE),
+            n = n(),
+            .groups = "drop"
+          ) %>%
+          mutate(sd_rmssd = replace_na(sd_rmssd, 0))
+        
+        p <- ggplot(daily, aes(x = study_day, y = avg_rmssd)) +
+          geom_ribbon(aes(ymin = avg_rmssd - sd_rmssd,
+                          ymax = avg_rmssd + sd_rmssd),
+                      fill = clr$hrv, alpha = 0.2) +
+          geom_line(color = clr$hrv, linewidth = 0.8) +
+          geom_point(color = clr$hrv, size = 3, alpha = 0.9) +
+          geom_hline(yintercept = 20, linetype = "dashed",
+                     color = clr$target_line, linewidth = 0.5) +
+          scale_x_continuous(breaks = scales::pretty_breaks()) +
+          scale_y_continuous(breaks = scales::pretty_breaks()) +
+          labs(x = "Study Day", y = "Avg Daily RMSSD (ms)") +
+          dash_theme()
+      } else {
+        daily <- df %>%
+          filter(!is.na(rmssd_ms), !is.na(datetime)) %>%
+          mutate(date_only = as.Date(datetime)) %>%
+          group_by(date_only) %>%
+          summarise(
+            avg_rmssd = mean(rmssd_ms, na.rm = TRUE),
+            sd_rmssd = sd(rmssd_ms, na.rm = TRUE),
+            n = n(),
+            .groups = "drop"
+          ) %>%
+          mutate(sd_rmssd = replace_na(sd_rmssd, 0))
+        
+        p <- ggplot(daily, aes(x = date_only, y = avg_rmssd)) +
+          geom_ribbon(aes(ymin = avg_rmssd - sd_rmssd,
+                          ymax = avg_rmssd + sd_rmssd),
+                      fill = clr$hrv, alpha = 0.2) +
+          geom_line(color = clr$hrv, linewidth = 0.8) +
+          geom_point(color = clr$hrv, size = 3, alpha = 0.9) +
+          geom_hline(yintercept = 20, linetype = "dashed",
+                     color = clr$target_line, linewidth = 0.5) +
+          scale_x_date(date_labels = "%b %d") +
+          scale_y_continuous(breaks = scales::pretty_breaks()) +
+          labs(x = NULL, y = "Avg Daily RMSSD (ms)") +
+          dash_theme()
+      }
+      
+      ggplotly(p, tooltip = c("x", "y")) %>%
+        layout(
+          hoverlabel = list(bgcolor = clr$bg),
+          margin = list(l = 50, r = 20, t = 20, b = 40),
+          annotations = list(
+            list(x = 1, y = 20, xref = "paper", yref = "y",
+                 text = "Baseline (20 ms)", showarrow = FALSE,
+                 xanchor = "right",
+                 font = list(color = clr$target_line, size = 10))
+          )
+        )
+    }
+  })
+  
+  
+  # HRV Heatmap (Admin Only)
+  # Shows HRV (RMSSD) by hour of day vs date/study day as a color-coded heatmap.
+  # Individual view: date on y-axis. All Participants: study day on y-axis, averaged.
+  output$hrv_heatmap_chart <- renderPlotly({
+    req(auth$logged_in, auth$is_admin)
+    df <- hrv_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No HRV data available"))
+    }
+    
+    is_all <- auth$is_admin && is.null(current_participant())
+    
+    if (is_all) {
+      # All Participants: average by study_day x hour
+      heatmap_data <- df %>%
+        filter(!is.na(rmssd_ms), !is.na(study_day), !is.na(datetime)) %>%
+        mutate(hour_only = hour(datetime)) %>%
+        group_by(study_day, hour_only) %>%
+        summarise(avg_rmssd = mean(rmssd_ms, na.rm = TRUE), .groups = "drop") %>%
+        complete(study_day, hour_only = 0:23)
+      
+      y_col <- ~study_day
+      y_title <- "Study Day"
+      y_format <- NULL
+      y_reverse <- TRUE
+    } else if (input$view_mode == "day") {
+      # Individual participant: study day on y-axis
+      heatmap_data <- df %>%
+        filter(!is.na(rmssd_ms), !is.na(datetime), !is.na(study_day)) %>%
+        mutate(hour_only = hour(datetime)) %>%
+        group_by(study_day, hour_only) %>%
+        summarise(avg_rmssd = mean(rmssd_ms, na.rm = TRUE), .groups = "drop") %>%
+        complete(study_day, hour_only = 0:23)
+      
+      y_col <- ~study_day
+      y_title <- "Study Day"
+      y_format <- NULL
+      y_reverse <- TRUE
+    } else {
+      # Individual participant: date on y-axis
+      heatmap_data <- df %>%
+        filter(!is.na(rmssd_ms), !is.na(datetime)) %>%
+        mutate(
+          date_only = as.Date(datetime),
+          hour_only = hour(datetime)
+        ) %>%
+        group_by(date_only, hour_only) %>%
+        summarise(avg_rmssd = mean(rmssd_ms, na.rm = TRUE), .groups = "drop") %>%
+        complete(date_only, hour_only = 0:23)
+      
+      y_col <- ~date_only
+      y_title <- "Date"
+      y_format <- "%b %d"
+      y_reverse <- TRUE
+    }
+    
+    if (nrow(heatmap_data) == 0) {
+      return(create_empty_plot("No HRV heatmap data available"))
+    }
+    
+    plot_ly(
+      data = heatmap_data,
+      x = ~hour_only,
+      y = y_col,
+      z = ~avg_rmssd,
+      type = "heatmap",
+      colorscale = list(
+        c(0, clr$text_primary),
+        c(0.5, clr$hrv),
+        c(1, clr$green)
+      ),
+      zmin = 5,
+      zmax = max(heatmap_data$avg_rmssd, na.rm = TRUE),
+      hovertemplate = paste(
+        "<b>%{y}</b><br>",
+        "Hour: %{x}:00<br>",
+        "Avg HRV: %{z:.1f} ms<extra></extra>"
+      ),
+      colorbar = list(
+        title = list(text = "RMSSD (ms)", side = "right"),
+        len = 0.8
+      )
+    ) %>%
+      layout(
+        xaxis = list(
+          title = "Hour of Day",
+          tickmode = "array",
+          tickvals = seq(0, 23, by = 2),
+          ticktext = sprintf("%02d:00", seq(0, 23, by = 2))
+        ),
+        yaxis = list(
+          title = y_title,
+          tickformat = y_format,
+          autorange = if (y_reverse) "reversed" else TRUE
+        ),
+        margin = list(l = 60, r = 50, t = 20, b = 60),
+        hoverlabel = list(bgcolor = clr$bg)
+      )
+  })
+  
+  # Heart Rate Heatmap (Admin Only)
+  # Shows heart rate by hour of day vs date/study day as a color-coded heatmap.
+  # Individual view: date on y-axis. All Participants: study day on y-axis, averaged.
+  output$hr_heatmap_chart <- renderPlotly({
+    req(auth$logged_in, auth$is_admin)
+    df <- hr_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No heart rate data available"))
+    }
+    
+    is_all <- auth$is_admin && is.null(current_participant())
+    
+    if (is_all) {
+      # All Participants: average by study_day x hour
+      heatmap_data <- df %>%
+        filter(!is.na(heart_rate_avg), !is.na(study_day), !is.na(datetime)) %>%
+        mutate(hour_only = hour(datetime)) %>%
+        group_by(study_day, hour_only) %>%
+        summarise(avg_hr = mean(heart_rate_avg, na.rm = TRUE), .groups = "drop") %>%
+        complete(study_day, hour_only = 0:23)
+      
+      y_col <- ~study_day
+      y_title <- "Study Day"
+      y_format <- NULL
+      y_reverse <- TRUE
+    } else if (input$view_mode == "day") {
+      # Individual participant: study day on y-axis
+      heatmap_data <- df %>%
+        filter(!is.na(heart_rate_avg), !is.na(datetime), !is.na(study_day)) %>%
+        mutate(hour_only = hour(datetime)) %>%
+        group_by(study_day, hour_only) %>%
+        summarise(avg_hr = mean(heart_rate_avg, na.rm = TRUE), .groups = "drop") %>%
+        complete(study_day, hour_only = 0:23)
+      
+      y_col <- ~study_day
+      y_title <- "Study Day"
+      y_format <- NULL
+      y_reverse <- TRUE
+    } else {
+      # Individual participant: date on y-axis
+      heatmap_data <- df %>%
+        filter(!is.na(heart_rate_avg), !is.na(datetime)) %>%
+        mutate(
+          date_only = as.Date(datetime),
+          hour_only = hour(datetime)
+        ) %>%
+        group_by(date_only, hour_only) %>%
+        summarise(avg_hr = mean(heart_rate_avg, na.rm = TRUE), .groups = "drop") %>%
+        complete(date_only, hour_only = 0:23)
+      
+      y_col <- ~date_only
+      y_title <- "Date"
+      y_format <- "%b %d"
+      y_reverse <- TRUE
+    }
+    
+    if (nrow(heatmap_data) == 0) {
+      return(create_empty_plot("No heart rate heatmap data available"))
+    }
+    
+    plot_ly(
+      data = heatmap_data,
+      x = ~hour_only,
+      y = y_col,
+      z = ~avg_hr,
+      type = "heatmap",
+      colorscale = list(
+        c(0, clr$text_primary),
+        c(0.3, clr$hr),
+        c(0.7, clr$yellow),
+        c(1, clr$vermillion)
+      ),
+      zmin = 55,
+      zmax = max(heatmap_data$avg_hr, na.rm = TRUE),
+      hovertemplate = paste(
+        "<b>%{y}</b><br>",
+        "Hour: %{x}:00<br>",
+        "Avg HR: %{z:.0f} bpm<extra></extra>"
+      ),
+      colorbar = list(
+        title = list(text = "Avg HR (bpm)", side = "right"),
+        len = 0.8
+      )
+    ) %>%
+      layout(
+        xaxis = list(
+          title = "Hour of Day",
+          tickmode = "array",
+          tickvals = seq(0, 23, by = 2),
+          ticktext = sprintf("%02d:00", seq(0, 23, by = 2))
+        ),
+        yaxis = list(
+          title = y_title,
+          tickformat = y_format,
+          autorange = if (y_reverse) "reversed" else TRUE
+        ),
+        margin = list(l = 60, r = 50, t = 20, b = 60),
+        hoverlabel = list(bgcolor = clr$bg)
+      )
+  })
   
   # ==================== SLEEP TAB CHARTS ====================
   
