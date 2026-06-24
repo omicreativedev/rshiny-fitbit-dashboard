@@ -54,6 +54,7 @@ ALL_USER_TABS <- c(
 # Tabs visible ONLY to admins (admin-only)
 ADMIN_ONLY_TABS <- c(
   "Analysis",
+  "Clinical Signals",
   "Data View"
 )
 
@@ -761,9 +762,10 @@ server <- function(input, output, session) {
     is_all <- is_admin && participant == "ALL"
     is_analysis <- !is.null(tab) && tab == "Analysis"
     is_data_view <- !is.null(tab) && tab == "Data View"
+    is_clinical <- !is.null(tab) && tab == "Clinical Signals" 
     
     # Data View tab: show all toolbar elements unchanged
-    if (is_data_view) {
+    if (is_data_view || is_clinical) {
       shinyjs::show("view_toggle_container")
       shinyjs::show("date_picker_container")
       shinyjs::show("day_picker_container")
@@ -1141,6 +1143,115 @@ server <- function(input, output, session) {
              total_sleep_minutes > 0, hrv_avg > 0)
   })
   
+  # Clinical signals data (derived metrics for Clinical Signals tab)
+  # Joins daily_metrics, sleep_minute, and sedentary_periods to produce
+  # one row per participant per study day with clinical flags.
+  clinical_data <- reactive({
+    req(auth$logged_in, auth$is_admin)
+    
+    data <- filtered_data_by_day()
+    metrics <- data[["daily_metrics"]]
+    sleep <- data[["sleep_minute"]]
+    sedentary <- data[["sedentary_periods"]]
+    
+    if (is.null(metrics) || nrow(metrics) == 0) return(NULL)
+    
+    # --- Base metrics from daily_metrics ---
+    base <- metrics %>%
+      mutate(date = as.Date(date)) %>%
+      select(participantID, date, study_day,
+             total_sleep_minutes, steps_daily_total, active_minutes,
+             hrv_avg_nightly, resting_heart_rate, spo2_lower_bound) %>%
+      filter(!is.na(study_day))
+    
+    # --- WASO and awakenings from sleep_minute ---
+    if (!is.null(sleep) && nrow(sleep) > 0) {
+      sleep_frag <- sleep %>%
+        mutate(
+          datetime_parsed = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"),
+          dateOfSleep = as.Date(dateOfSleep)
+        ) %>%
+        filter(!is.na(datetime_parsed)) %>%
+        arrange(participantID, dateOfSleep, datetime_parsed) %>%
+        group_by(participantID, dateOfSleep) %>%
+        mutate(
+          # Find first sleep stage (not wake)
+          is_sleep = sleep_stage %in% c("light", "deep", "rem", "asleep"),
+          first_sleep_idx = min(which(is_sleep), na.rm = TRUE),
+          after_onset = row_number() >= first_sleep_idx
+        ) %>%
+        filter(after_onset) %>%
+        summarise(
+          waso_minutes = sum(sleep_stage == "wake", na.rm = TRUE),
+          awakenings = sum(
+            sleep_stage == "wake" & lag(sleep_stage, default = "wake") != "wake",
+            na.rm = TRUE
+          ),
+          .groups = "drop"
+        ) %>%
+        rename(date = dateOfSleep)
+      
+      base <- base %>%
+        left_join(sleep_frag, by = c("participantID", "date"))
+    } else {
+      base$waso_minutes <- NA_real_
+      base$awakenings <- NA_integer_
+    }
+    
+    # --- Longest sedentary bout from sedentary_periods ---
+    if (!is.null(sedentary) && nrow(sedentary) > 0 && "duration_minutes" %in% names(sedentary)) {
+      longest_bout <- sedentary %>%
+        mutate(date = as.Date(period_start)) %>%
+        filter(!is.na(duration_minutes)) %>%
+        group_by(participantID, date) %>%
+        summarise(
+          longest_sedentary_bout = max(duration_minutes, na.rm = TRUE),
+          total_sedentary = sum(duration_minutes, na.rm = TRUE),
+          .groups = "drop"
+        )
+      
+      base <- base %>%
+        left_join(longest_bout, by = c("participantID", "date"))
+    } else {
+      base$longest_sedentary_bout <- NA_real_
+      base$total_sedentary <- NA_real_
+    }
+    
+    # --- Derive clinical flags ---
+    # Person-level means for relative flags
+    base <- base %>%
+      group_by(participantID) %>%
+      mutate(
+        hrv_person_mean = mean(hrv_avg_nightly, na.rm = TRUE),
+        hrv_person_sd = sd(hrv_avg_nightly, na.rm = TRUE),
+        rhr_person_mean = mean(resting_heart_rate, na.rm = TRUE),
+        rhr_person_sd = sd(resting_heart_rate, na.rm = TRUE)
+      ) %>%
+      ungroup() %>%
+      mutate(
+        hrv_person_sd = replace_na(hrv_person_sd, 0),
+        rhr_person_sd = replace_na(rhr_person_sd, 0),
+        # Flags
+        short_sleep = ifelse(!is.na(total_sleep_minutes), total_sleep_minutes < 360, NA),
+        fragmented_sleep = ifelse(!is.na(waso_minutes), waso_minutes > 30 | awakenings > 5, NA),
+        low_activity = ifelse(!is.na(steps_daily_total), steps_daily_total < 5000, NA),
+        long_sedentary = ifelse(!is.na(longest_sedentary_bout), longest_sedentary_bout > 60, NA),
+        low_hrv = ifelse(
+          !is.na(hrv_avg_nightly) & !is.na(hrv_person_mean),
+          hrv_avg_nightly < (hrv_person_mean - hrv_person_sd),
+          NA
+        ),
+        high_resting_hr = ifelse(
+          !is.na(resting_heart_rate) & !is.na(rhr_person_mean),
+          resting_heart_rate > (rhr_person_mean + rhr_person_sd),
+          NA
+        ),
+        low_spo2 = ifelse(!is.na(spo2_lower_bound), spo2_lower_bound < 90, NA)
+      )
+    
+    base
+  })
+  
   # ==================== METRIC CARDS ====================
   # Summary statistics shown at the top of the Overview tab
   
@@ -1210,6 +1321,7 @@ server <- function(input, output, session) {
       "Insights"    = insights_tab_content,
       "Projections" = projections_tab_content,
       "Analysis"    = analysis_tab_content,
+      "Clinical Signals"  = clinical_signals_tab_content,
       "Data View"   = data_view_tab_content
     )
     
@@ -1700,6 +1812,36 @@ server <- function(input, output, session) {
         column(12, chart_card_ui(
           chart_id  = "admin_summary_table",
           title     = "Participant Activity Summary",
+          output_fn = DTOutput,
+          is_admin  = is_admin
+        ))
+      )
+    )
+  }
+  
+  # ================= CLINICAL SIGNALS Tab =================
+  
+  # Clinical Signals tab: admin-only clinical heatmap and summary table
+  # showing derived health flags and daily metrics per participant
+  clinical_signals_tab_content <- function(is_admin) {
+    init_chart_card("clinical_heatmap", is_admin)
+    init_chart_card("clinical_summary_table", is_admin)
+    
+    tagList(
+      br(),
+      fluidRow(
+        column(12, chart_card_ui(
+          chart_id  = "clinical_heatmap",
+          title     = "Clinical Signal Heatmap",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "350px"
+        ))
+      ),
+      fluidRow(
+        column(12, chart_card_ui(
+          chart_id  = "clinical_summary_table",
+          title     = "Daily Clinical Summary",
           output_fn = DTOutput,
           is_admin  = is_admin
         ))
@@ -4112,6 +4254,190 @@ server <- function(input, output, session) {
           scale    = 3
         )
       )
+  })
+  
+  # ==================== CLINICAL SIGNALS TAB CHARTS ====================
+  
+  # Clinical Signal Heatmap
+  # Shows a grid of clinical flags (rows) by study day (columns).
+  # Green = no flag, red = flagged, grey = no data.
+  # Individual view: one participant's flags.
+  # All Participants: flags based on cohort-averaged metrics.
+  output$clinical_heatmap <- renderPlotly({
+    req(auth$logged_in, auth$is_admin)
+    df <- clinical_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No clinical data available"))
+    }
+    
+    is_all <- auth$is_admin && is.null(current_participant())
+    
+    if (is_all) {
+      # Average metrics across participants per study day, then re-flag
+      df <- df %>%
+        group_by(study_day) %>%
+        summarise(
+          total_sleep_minutes = mean(total_sleep_minutes, na.rm = TRUE),
+          waso_minutes = mean(waso_minutes, na.rm = TRUE),
+          awakenings = mean(awakenings, na.rm = TRUE),
+          steps_daily_total = mean(steps_daily_total, na.rm = TRUE),
+          longest_sedentary_bout = mean(longest_sedentary_bout, na.rm = TRUE),
+          hrv_avg_nightly = mean(hrv_avg_nightly, na.rm = TRUE),
+          resting_heart_rate = mean(resting_heart_rate, na.rm = TRUE),
+          spo2_lower_bound = mean(spo2_lower_bound, na.rm = TRUE),
+          .groups = "drop"
+        ) %>%
+        mutate(
+          hrv_mean_all = mean(hrv_avg_nightly, na.rm = TRUE),
+          hrv_sd_all = sd(hrv_avg_nightly, na.rm = TRUE),
+          rhr_mean_all = mean(resting_heart_rate, na.rm = TRUE),
+          rhr_sd_all = sd(resting_heart_rate, na.rm = TRUE),
+          hrv_sd_all = replace_na(hrv_sd_all, 0),
+          rhr_sd_all = replace_na(rhr_sd_all, 0),
+          short_sleep = ifelse(!is.na(total_sleep_minutes), total_sleep_minutes < 360, NA),
+          fragmented_sleep = ifelse(!is.na(waso_minutes), waso_minutes > 30 | awakenings > 5, NA),
+          low_activity = ifelse(!is.na(steps_daily_total), steps_daily_total < 5000, NA),
+          long_sedentary = ifelse(!is.na(longest_sedentary_bout), longest_sedentary_bout > 60, NA),
+          low_hrv = ifelse(
+            !is.na(hrv_avg_nightly),
+            hrv_avg_nightly < (hrv_mean_all - hrv_sd_all),
+            NA
+          ),
+          high_resting_hr = ifelse(
+            !is.na(resting_heart_rate),
+            resting_heart_rate > (rhr_mean_all + rhr_sd_all),
+            NA
+          ),
+          low_spo2 = ifelse(!is.na(spo2_lower_bound), spo2_lower_bound < 90, NA)
+        )
+    }
+    
+    # Pivot flags to long format for heatmap
+    flag_cols <- c("short_sleep", "fragmented_sleep", "low_activity",
+                   "long_sedentary", "low_hrv", "high_resting_hr", "low_spo2")
+    
+    flag_labels <- c(
+      short_sleep = "Short Sleep (< 6 hrs)",
+      fragmented_sleep = "Fragmented Sleep",
+      low_activity = "Low Activity (< 5k steps)",
+      long_sedentary = "Long Sedentary Bout (> 60 min)",
+      low_hrv = "Low HRV (below personal mean - 1 SD)",
+      high_resting_hr = "High Resting HR (above personal mean + 1 SD)",
+      low_spo2 = "Low SpO2 (< 90%)"
+    )
+    
+    heatmap_long <- df %>%
+      select(study_day, all_of(flag_cols)) %>%
+      pivot_longer(cols = all_of(flag_cols), names_to = "signal", values_to = "flagged") %>%
+      mutate(
+        signal_label = flag_labels[signal],
+        signal_label = factor(signal_label, levels = rev(flag_labels)),
+        # Convert to numeric: 1 = flagged, 0 = ok, NA = no data
+        z_value = case_when(
+          is.na(flagged) ~ -1,
+          flagged == TRUE ~ 1,
+          flagged == FALSE ~ 0
+        ),
+        hover_text = case_when(
+          is.na(flagged) ~ paste0(signal_label, "<br>Day ", study_day, "<br>No data"),
+          flagged == TRUE ~ paste0(signal_label, "<br>Day ", study_day, "<br>FLAGGED"),
+          flagged == FALSE ~ paste0(signal_label, "<br>Day ", study_day, "<br>Normal")
+        )
+      )
+    
+    if (nrow(heatmap_long) == 0) {
+      return(create_empty_plot("No clinical flag data available"))
+    }
+    
+    plot_ly(
+      data = heatmap_long,
+      x = ~paste("Day", study_day),
+      y = ~signal_label,
+      z = ~z_value,
+      type = "heatmap",
+      text = ~hover_text,
+      hoverinfo = "text",
+      colorscale = list(
+        c(0, clr$lightgrey),
+        c(0.5, clr$green),
+        c(1, clr$vermillion)
+      ),
+      zmin = -1,
+      zmax = 1,
+      showscale = FALSE
+    ) %>%
+      layout(
+        xaxis = list(
+          title = "",
+          tickangle = 0,
+          type = "category"
+        ),
+        yaxis = list(
+          title = "",
+          tickfont = list(size = 10)
+        ),
+        margin = list(l = 220, r = 20, t = 20, b = 40),
+        hoverlabel = list(bgcolor = clr$bg)
+      )
+  })
+  
+  # Daily Clinical Summary Table
+  # Shows one row per study day with key metrics and derived values.
+  # Individual view: one participant's daily data.
+  # All Participants: averaged across participants per study day.
+  output$clinical_summary_table <- renderDT({
+    req(auth$logged_in, auth$is_admin)
+    df <- clinical_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(datatable(data.frame(Message = "No clinical data available")))
+    }
+    
+    is_all <- auth$is_admin && is.null(current_participant())
+    
+    if (is_all) {
+      summary_df <- df %>%
+        group_by(study_day) %>%
+        summarise(
+          `Sleep (min)` = round(mean(total_sleep_minutes, na.rm = TRUE)),
+          `WASO (min)` = round(mean(waso_minutes, na.rm = TRUE)),
+          `Awakenings` = round(mean(awakenings, na.rm = TRUE), 1),
+          `Steps` = round(mean(steps_daily_total, na.rm = TRUE)),
+          `Active Min` = round(mean(active_minutes, na.rm = TRUE)),
+          `Longest Sed. Bout` = round(mean(longest_sedentary_bout, na.rm = TRUE)),
+          `HRV (RMSSD)` = round(mean(hrv_avg_nightly, na.rm = TRUE), 1),
+          `Resting HR` = round(mean(resting_heart_rate, na.rm = TRUE), 1),
+          .groups = "drop"
+        ) %>%
+        rename(`Study Day` = study_day)
+    } else {
+      summary_df <- df %>%
+        arrange(study_day) %>%
+        transmute(
+          `Study Day` = study_day,
+          `Sleep (min)` = round(total_sleep_minutes),
+          `WASO (min)` = round(waso_minutes),
+          `Awakenings` = awakenings,
+          `Steps` = round(steps_daily_total),
+          `Active Min` = round(active_minutes),
+          `Longest Sed. Bout` = round(longest_sedentary_bout),
+          `HRV (RMSSD)` = round(hrv_avg_nightly, 1),
+          `Resting HR` = round(resting_heart_rate, 1)
+        )
+    }
+    
+    datatable(
+      summary_df,
+      options = list(
+        pageLength = 14,
+        scrollX = TRUE,
+        dom = "ftip",
+        columnDefs = list(
+          list(className = "dt-center", targets = "_all")
+        )
+      ),
+      rownames = FALSE,
+      class = "compact stripe"
+    )
   })
   
   # ==================== ANALYSIS TAB CHARTS ====================

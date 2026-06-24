@@ -996,6 +996,46 @@ CHART_INFO <- list(
     Admin-only.
   "),
   
+  # ============================================================
+  # CLINICAL SIGNALS TAB (admin-only)
+  # ============================================================
+  
+  clinical_heatmap = HTML("
+    <b>What this shows:</b><br>
+    A daily snapshot of 7 clinical signals, one column per study day.
+    Green cells indicate normal values; red cells indicate a flagged
+    concern; grey cells indicate missing data.<br><br>
+    <b>Signals and thresholds:</b><br>
+    &bull; <b>Short Sleep:</b> Total sleep < 6 hours (360 min)<br>
+    &bull; <b>Fragmented Sleep:</b> WASO > 30 min or > 5 awakenings<br>
+    &bull; <b>Low Activity:</b> < 5,000 daily steps<br>
+    &bull; <b>Long Sedentary Bout:</b> Longest sedentary period > 60 min<br>
+    &bull; <b>Low HRV:</b> Below participant's personal mean minus 1 SD<br>
+    &bull; <b>High Resting HR:</b> Above participant's personal mean plus 1 SD<br>
+    &bull; <b>Low SpO2:</b> Lower bound < 90%<br><br>
+    <b>Data sources:</b><br>
+    daily_metrics.csv, sleep_minute.csv, sedentary_periods.csv<br><br>
+    <b>Admin-only chart.</b><br><br>
+    <b>All Participants mode:</b><br>
+    Metrics are averaged across participants per study day before
+    flags are applied. HRV and HR flags use cohort-level mean ± 1 SD
+    instead of individual baselines.
+  "),
+  
+  clinical_summary_table = HTML("
+    <b>What this shows:</b><br>
+    One row per study day with key daily health metrics including
+    sleep duration, wake after sleep onset (WASO), number of awakenings,
+    step count, active minutes, longest sedentary bout, nightly HRV,
+    and resting heart rate.<br><br>
+    <b>Data sources:</b><br>
+    daily_metrics.csv (sleep, steps, active minutes, HRV, resting HR),
+    sleep_minute.csv (WASO, awakenings),
+    sedentary_periods.csv (longest bout)<br><br>
+    <b>Admin-only table.</b><br><br>
+    <b>All Participants mode:</b><br>
+    All values are averaged across participants per study day.
+  "),
   
   # ============================================================================
   # DATA VIEW TAB (admin-only tab)
