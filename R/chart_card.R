@@ -506,6 +506,33 @@ CHART_INFO <- list(
     ")
   ),
   
+  # Sleep Latency — minutes to fall asleep
+  sleep_latency_chart = list(
+    user = HTML("
+      <b>What this shows:</b><br>
+      How many minutes it takes you to fall asleep each night. Each dot
+      represents one sleep session. If you have multiple sleep sessions
+      in one night, they are shown separately (labeled S2, S3, etc.).<br><br>
+      <b>Data source:</b><br>
+      Fitbit minute-by-minute sleep data<br><br>
+      <b>Reference lines:</b><br>
+      &bull; Green dashed: Good (under 15 minutes)<br>
+      &bull; Yellow dashed: Fair (15–30 minutes)<br>
+      Above 30 minutes may indicate difficulty falling asleep.
+    "),
+    admin = HTML("
+      <b>What this shows:</b><br>
+      Sleep latency (minutes from first recorded wake to first sleep stage)
+      per session per night. Multiple sessions per night are shown separately.<br><br>
+      <b>Data source:</b><br>
+      sleep_minute.csv (session boundaries detected by gaps > 120 minutes)<br><br>
+      <b>All Participants mode:</b><br>
+      Sessions are averaged within each participant-day first, then averaged
+      across participants by study day — one data point per study day.<br><br>
+      <b>Reference lines:</b><br>
+      Green = Good (< 15 min), Yellow = Fair (15–30 min).
+    ")
+  ),
   
   # ============================================================================
   # ACTIVITY TAB — CHARTS

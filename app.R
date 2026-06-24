@@ -1249,6 +1249,7 @@ server <- function(input, output, session) {
     init_metric_card("kpi_steps", is_admin)
     init_metric_card("kpi_sleep", is_admin)
     init_metric_card("kpi_spo2", is_admin)
+    # add additional init_chart_card here
     
     # Build UI layout: metric cards in top row, charts below
     tagList(
@@ -1301,6 +1302,7 @@ server <- function(input, output, session) {
     init_chart_card("hr_timeseries", is_admin)
     init_chart_card("hr_distribution", is_admin)
     init_chart_card("hr_by_hour", is_admin)
+    # add additional init_chart_card here
     
     # Build UI layout with heart rate visualizations
     tagList(
@@ -1369,7 +1371,9 @@ server <- function(input, output, session) {
     init_chart_card("sleep_stage_pie", is_admin)
     init_chart_card("breathing_rate_chart", is_admin)
     init_chart_card("hypnogram_chart", is_admin)
+    init_chart_card("sleep_latency_chart", is_admin)
     init_chart_card("sleep_efficiency_chart", is_admin)
+    # add additional init_chart_card here
     
     # Build UI layout with sleep visualizations
     tagList(
@@ -1414,6 +1418,15 @@ server <- function(input, output, session) {
         ))
       ),
       fluidRow(
+        column(12, chart_card_ui(
+          chart_id  = "sleep_latency_chart",
+          title     = "Sleep Latency",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "350px"
+        ))
+      ),
+      fluidRow(
         # Sleep efficiency with admin toggle for aggregate/split view
         column(12, chart_card_ui(
           chart_id  = "sleep_efficiency_chart",
@@ -1443,6 +1456,7 @@ server <- function(input, output, session) {
     init_chart_card("activity_steps_chart", is_admin)
     init_chart_card("activity_steps_by_hour", is_admin)
     init_chart_card("activity_distance_chart", is_admin)
+    # add additional init_chart_card here
     
     # Build UI layout with activity visualizations
     tagList(
@@ -1518,6 +1532,7 @@ server <- function(input, output, session) {
       init_chart_card("weekday_hrv_chart", is_admin)
       init_chart_card("weekday_hr_chart", is_admin)
     }
+    # add additional init_chart_card here
     
     # Build UI layout with insight metrics and weekday/weekend comparisons
     tagList(
@@ -1580,6 +1595,7 @@ server <- function(input, output, session) {
   projections_tab_content <- function(is_admin) {
     # Initialize chart toggle functionality for HRV vs sleep chart
     init_chart_card("hrv_sleep_chart", is_admin)
+    # add additional init_chart_card here
     
     # Build UI layout with HRV vs sleep duration scatter plot
     tagList(
@@ -1606,6 +1622,7 @@ server <- function(input, output, session) {
     init_chart_card("admin_steps_comparison", is_admin)
     init_chart_card("admin_completeness_heatmap", is_admin)
     init_chart_card("admin_summary_table", is_admin)
+    # add additional init_chart_card here
     
     # Build UI layout with multi-participant analysis visualizations
     tagList(
@@ -1659,6 +1676,7 @@ server <- function(input, output, session) {
   data_view_tab_content <- function(is_admin) {
     # Initialize chart toggle functionality for data table
     init_chart_card("data_view_table", is_admin)
+    # add additional init_chart_card here
     
     # Build UI layout with dataset selector and data table
     tagList(
@@ -2462,6 +2480,213 @@ server <- function(input, output, session) {
       )
   })
   
+  
+  # test
+  # Sleep Latency: Minutes to Fall Asleep
+  # Shows how long it takes to transition from wake to sleep each night.
+  # Handles multiple sleep sessions per night (e.g., naps or fragmented sleep).
+  # Individual view: one point per session, labeled "(S2)" for second sessions.
+  # All Participants view: sessions averaged per participant per day, then
+  # averaged across participants by study day — one point per study day.
+  output$sleep_latency_chart <- renderPlotly({
+    req(auth$logged_in)
+    df <- sleep_data()
+  
+    
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No sleep data available"))
+    }
+    
+    is_all <- auth$is_admin && is.null(current_participant())
+    
+    # Parse datetime consistently
+    df <- df %>%
+      mutate(datetime_parsed = as.POSIXct(datetime, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")) %>%
+      filter(!is.na(datetime_parsed))
+    
+    if (nrow(df) == 0) {
+      return(create_empty_plot("No valid sleep datetime data"))
+    }
+    
+    # --- Identify sleep sessions (gap > 120 min = new session) ---
+    df_sessions <- df %>%
+      arrange(participantID, dateOfSleep, datetime_parsed) %>%
+      group_by(participantID, dateOfSleep) %>%
+      mutate(
+        time_diff = as.numeric(difftime(datetime_parsed, lag(datetime_parsed), units = "mins")),
+        new_session = ifelse(is.na(time_diff) | time_diff > 120, 1, 0),
+        session_id = cumsum(new_session)
+      ) %>%
+      ungroup()
+    
+    # --- Calculate latency per session ---
+    latency_raw <- df_sessions %>%
+      group_by(participantID, dateOfSleep, study_day, session_id) %>%
+      summarise(
+        session_start = min(datetime_parsed),
+        first_sleep = suppressWarnings(min(
+          datetime_parsed[sleep_stage %in% c("asleep", "light", "deep", "rem")],
+          na.rm = TRUE
+        )),
+        .groups = "drop"
+      ) %>%
+      filter(!is.infinite(first_sleep)) %>%
+      mutate(
+        latency_min = as.numeric(difftime(first_sleep, session_start, units = "mins"))
+      ) %>%
+      filter(!is.na(latency_min), latency_min >= 0)
+    
+    
+    
+    if (nrow(latency_raw) == 0) {
+      return(create_empty_plot("No sleep latency data available"))
+    }
+    
+    # === ALL PARTICIPANTS: average by study day ===
+    if (is_all) {
+      # Step 1: average sessions within each participant-day
+      per_participant_day <- latency_raw %>%
+        group_by(participantID, study_day) %>%
+        summarise(avg_latency = mean(latency_min, na.rm = TRUE), .groups = "drop")
+      
+      # Step 2: average across participants per study day
+      plot_data <- per_participant_day %>%
+        group_by(study_day) %>%
+        summarise(latency_min = mean(avg_latency, na.rm = TRUE), .groups = "drop") %>%
+        arrange(study_day)
+      
+      p <- ggplot(plot_data, aes(x = study_day, y = latency_min)) +
+        geom_line(color = clr$deep, linewidth = 0.8) +
+        geom_point(color = clr$deep, size = 3, alpha = 0.8) +
+        geom_hline(yintercept = 15, linetype = "dashed", color = clr$green, linewidth = 0.5) +
+        geom_hline(yintercept = 30, linetype = "dashed", color = clr$yellow, linewidth = 0.5) +
+        scale_x_continuous(breaks = scales::pretty_breaks()) +
+        scale_y_continuous(breaks = scales::pretty_breaks()) +
+        labs(x = "Study Day", y = "Avg Minutes to Fall Asleep (all participants)") +
+        dash_theme()
+      
+      return(ggplotly(p, tooltip = c("x", "y")) %>%
+               layout(hoverlabel = list(bgcolor = clr$bg),
+                      margin = list(l = 50, r = 20, t = 20, b = 40)))
+    }
+    
+    # === INDIVIDUAL PARTICIPANT ===
+    if (input$view_mode == "day") {
+      # Study day view: label sessions within each study day
+      plot_data <- latency_raw %>%
+        arrange(study_day, session_id) %>%
+        group_by(study_day) %>%
+        mutate(
+          n_sessions = n(),
+          label = if_else(
+            n_sessions == 1,
+            paste("Day", study_day),
+            paste0("Day ", study_day, ifelse(row_number() > 1, paste0(" (S", session_id, ")"), ""))
+          )
+        ) %>%
+        ungroup() %>%
+        mutate(label = factor(label, levels = unique(label)))
+      
+      p <- plot_ly(
+        data = plot_data,
+        x = ~label,
+        y = ~latency_min,
+        type = "scatter",
+        mode = "lines+markers",
+        line = list(color = clr$text_primary, width = 2),
+        marker = list(
+          color = ~latency_min,
+          colorscale = list(
+            c(0, clr$green),
+            c(0.5, clr$yellow),
+            c(1, clr$vermillion)
+          ),
+          size = 12,
+          showscale = FALSE
+        ),
+        hovertemplate = "<b>%{x}</b><br>Sleep Latency: %{y:.1f} min<extra></extra>"
+      )
+    } else {
+      # Date view: label sessions within each date
+      plot_data <- latency_raw %>%
+        arrange(dateOfSleep, session_id) %>%
+        group_by(dateOfSleep) %>%
+        mutate(
+          n_sessions = n(),
+          label = if_else(
+            n_sessions == 1,
+            format(dateOfSleep, "%b %d"),
+            paste0(format(dateOfSleep, "%b %d"), ifelse(row_number() > 1, paste0(" (S", session_id, ")"), ""))
+          )
+        ) %>%
+        ungroup() %>%
+        mutate(label = factor(label, levels = unique(label)))
+      
+      p <- plot_ly(
+        data = plot_data,
+        x = ~label,
+        y = ~latency_min,
+        type = "scatter",
+        mode = "lines+markers",
+        line = list(color = clr$text_primary, width = 2),
+        marker = list(
+          color = ~latency_min,
+          colorscale = list(
+            c(0, clr$green),
+            c(0.5, clr$yellow),
+            c(1, clr$vermillion)
+          ),
+          size = 12,
+          showscale = FALSE
+        ),
+        hovertemplate = "<b>%{x}</b><br>Sleep Latency: %{y:.1f} min<extra></extra>"
+      )
+    }
+    
+    # Add reference lines and annotations
+    avg_lat <- round(mean(plot_data$latency_min, na.rm = TRUE), 1)
+    latest_lat <- round(tail(plot_data$latency_min, 1), 1)
+    
+    p %>%
+      layout(
+        xaxis = list(
+          title = if (input$view_mode == "day") "Study Day" else NULL,
+          tickangle = -45,
+          tickfont = list(size = 10),
+          type = "category"
+        ),
+        yaxis = list(
+          title = "Minutes to Fall Asleep",
+          range = c(0, max(plot_data$latency_min, na.rm = TRUE) * 1.2)
+        ),
+        margin = list(l = 50, r = 20, t = 20, b = 100),
+        hoverlabel = list(bgcolor = clr$bg),
+        shapes = list(
+          list(type = "line", x0 = 0, x1 = 1, xref = "paper",
+               y0 = 15, y1 = 15,
+               line = list(color = clr$green, dash = "dash", width = 1)),
+          list(type = "line", x0 = 0, x1 = 1, xref = "paper",
+               y0 = 30, y1 = 30,
+               line = list(color = clr$yellow, dash = "dash", width = 1))
+        ),
+        annotations = list(
+          list(x = 1, y = 15, xref = "paper", yref = "y",
+               text = "Good (< 15 min)", showarrow = FALSE,
+               xanchor = "right", font = list(color = clr$green, size = 10)),
+          list(x = 1, y = 30, xref = "paper", yref = "y",
+               text = "Fair (15-30 min)", showarrow = FALSE,
+               xanchor = "right", font = list(color = clr$yellow, size = 10))
+        )
+      ) %>%
+      config(
+        toImageButtonOptions = list(
+          format = "png", filename = "sleep_latency",
+          width = 900, height = 600, scale = 3
+        )
+      )
+  })
+  
+  
   # Sleep Efficiency
   # Shows percentage of time in bed spent asleep
   output$sleep_efficiency_chart <- renderPlotly({
@@ -2568,7 +2793,6 @@ server <- function(input, output, session) {
         )
     }
   })
-  
   
   # ==================== ACTIVITY TAB CHARTS ====================
   
