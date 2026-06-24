@@ -4,35 +4,35 @@
 
 # Data colors - mapped to metrics
 clr <- list(
-  hr       = "#D55E00",  # vermillion
-  hrv      = "#D55E00",  # vermillion
-  steps    = "#0072B2",  # blue
-  deep     = "#009E73",  # green
-  light    = "#56B4E9",  # lightblue
-  rem      = "#CC79A7",  # purple
-  wake     = "#E69F00",  # orange
-  asleep   = "#4B5563", 
-  full_sleep = "#9CA3AF",
-  calories = "#F5C710",  # yellow
-  spo2     = "#009E73",  # green
-  bg       = "#FFFFFF",  # white
+  hr          = "#D55E00",  # vermillion
+  hrv         = "#D55E00",  # vermillion
+  steps       = "#0072B2",  # blue
+  deep        = "#009E73",  # green
+  light       = "#56B4E9",  # lightblue
+  rem         = "#CC79A7",  # purple
+  wake        = "#E69F00",  # orange
+  asleep      = "#4B5563",  # dark grey
+  full_sleep  = "#9CA3AF",  # medium grey
+  calories    = "#F5C710",  # yellow
+  spo2        = "#009E73",  # green
+  bg          = "#FFFFFF",  # white
   
-  walk     = "#D55E00",  # vermillion
-  bike     = "#CC79A7",  # purple
-  run      = "#E69F00",  # orange
-  sport    = "#009E73",  # green
-  workout  = "#F5C710",  # yellow
-  swim     = "#0072B2",  # blue
-  yoga     = "#000000",  # black
+  walk        = "#D55E00",  # vermillion
+  bike        = "#CC79A7",  # purple
+  run         = "#E69F00",  # orange
+  sport       = "#009E73",  # green
+  workout     = "#F5C710",  # yellow
+  swim        = "#0072B2",  # blue
+  yoga        = "#000000",  # black
   
-  fat_burn = "#56B4E9",  # lightblue
-  cardio   = "#F5C710",  # yellow
-  peak     = "#D55E00",  # vermillion
+  fat_burn    = "#56B4E9",  # lightblue
+  cardio      = "#F5C710",  # yellow
+  peak        = "#D55E00",  # vermillion
   
-  avg      = "#D55E00",  # vermillion
-  min      = "#009E73",  # green
-  sum      = "#56B4E9",  # lightblue
-  max      = "#E69F00",  # orange
+  avg         = "#D55E00",  # vermillion
+  min         = "#009E73",  # green
+  sum         = "#56B4E9",  # lightblue
+  max         = "#E69F00",  # orange
   
   text_primary   = "#000000",  # black
   text_secondary = "#999999",  # grey
@@ -42,15 +42,15 @@ clr <- list(
   error_bar   = "#999999",  # grey
   
   # Okabe-Ito color definitions
-  black      = "#000000",
-  orange     = "#E69F00",
-  lightblue  = "#56B4E9",
-  green      = "#009E73",
-  yellow     = "#F5C710",
-  blue       = "#0072B2",
-  vermillion = "#D55E00",
-  purple     = "#CC79A7",
-  grey       = "#999999",
-  white      = "#FFFFFF",
-  lightgrey  = "#E5E7EB"
+  black       = "#000000",
+  orange      = "#E69F00",
+  lightblue   = "#56B4E9",
+  green       = "#009E73",
+  yellow      = "#F5C710",
+  blue        = "#0072B2",
+  vermillion  = "#D55E00",
+  purple      = "#CC79A7",
+  grey        = "#999999",
+  white       = "#FFFFFF",
+  lightgrey   = "#E5E7EB"
 )
