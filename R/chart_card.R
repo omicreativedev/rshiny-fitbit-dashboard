@@ -1022,6 +1022,55 @@ CHART_INFO <- list(
     instead of individual baselines.
   "),
   
+  sleep_fragmentation_chart = HTML("
+    <b>What this shows:</b><br>
+    Two measures of sleep disruption per study day:<br><br>
+    <b>WASO (bars):</b> Wake After Sleep Onset — total minutes spent
+    awake after initially falling asleep. Higher values indicate more
+    disrupted sleep.<br><br>
+    <b>Awakenings (line):</b> Number of distinct wake episodes after
+    sleep onset. Frequent awakenings are associated with insomnia,
+    anxiety, PTSD-like hyperarousal, and stress-related sleep
+    disruption.<br><br>
+    <b>Data source:</b><br>
+    sleep_minute.csv (wake episodes counted after first sleep stage)<br><br>
+    <b>Admin-only chart.</b><br><br>
+    <b>All Participants mode:</b><br>
+    Both metrics averaged across participants per study day.
+  "),
+  
+  longest_sedentary_chart = HTML("
+    <b>What this shows:</b><br>
+    The longest single sedentary period recorded each study day, in minutes.
+    The dashed yellow line at 60 minutes marks a commonly used threshold
+    for prolonged sedentary behavior.<br><br>
+    <b>Data source:</b><br>
+    sedentary_periods.csv (max duration_minutes per day)<br><br>
+    <b>Admin-only chart.</b><br><br>
+    <b>All Participants mode:</b><br>
+    Averaged across participants per study day.
+  "),
+  
+  recovery_flag_chart = HTML("
+    <b>What this shows:</b><br>
+    A focused recovery assessment showing three key signals per study day.
+    Green = normal, red = flagged, grey = no data.<br><br>
+    <b>Signals and thresholds:</b><br>
+    &bull; <b>Low HRV:</b> Below participant's personal mean minus 1 SD.
+    Indicates reduced autonomic recovery.<br>
+    &bull; <b>High Resting HR:</b> Above participant's personal mean plus 1 SD.
+    May indicate physiological stress or poor recovery.<br>
+    &bull; <b>Short Sleep:</b> Total sleep under 6 hours (360 min).<br><br>
+    <b>Hover</b> over any cell to see the actual value and deviation
+    from the participant's personal baseline.<br><br>
+    <b>Data source:</b><br>
+    daily_metrics.csv<br><br>
+    <b>Admin-only chart.</b><br><br>
+    <b>All Participants mode:</b><br>
+    Metrics averaged across participants per study day. Flags use
+    cohort-level mean ± 1 SD instead of individual baselines.
+  "),
+  
   clinical_summary_table = HTML("
     <b>What this shows:</b><br>
     One row per study day with key daily health metrics including

@@ -1825,6 +1825,9 @@ server <- function(input, output, session) {
   # showing derived health flags and daily metrics per participant
   clinical_signals_tab_content <- function(is_admin) {
     init_chart_card("clinical_heatmap", is_admin)
+    init_chart_card("sleep_fragmentation_chart", is_admin)
+    init_chart_card("longest_sedentary_chart", is_admin)
+    init_chart_card("recovery_flag_chart", is_admin)
     init_chart_card("clinical_summary_table", is_admin)
     
     tagList(
@@ -1836,6 +1839,31 @@ server <- function(input, output, session) {
           output_fn = plotlyOutput,
           is_admin  = is_admin,
           height    = "350px"
+        ))
+      ),
+      fluidRow(
+        column(6, chart_card_ui(
+          chart_id  = "sleep_fragmentation_chart",
+          title     = "Sleep Fragmentation",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "300px"
+        )),
+        column(6, chart_card_ui(
+          chart_id  = "longest_sedentary_chart",
+          title     = "Longest Sedentary Bout per Day",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "300px"
+        ))
+      ),
+      fluidRow(
+        column(12, chart_card_ui(
+          chart_id  = "recovery_flag_chart",
+          title     = "Recovery Flags",
+          output_fn = plotlyOutput,
+          is_admin  = is_admin,
+          height    = "250px"
         ))
       ),
       fluidRow(
@@ -4377,6 +4405,253 @@ server <- function(input, output, session) {
           tickfont = list(size = 10)
         ),
         margin = list(l = 220, r = 20, t = 20, b = 40),
+        hoverlabel = list(bgcolor = clr$bg)
+      )
+  })
+  
+  # Sleep Fragmentation Chart
+  # Shows WASO (wake after sleep onset) minutes and awakening count per study day.
+  # Individual view: one participant. All Participants: averaged across participants.
+  output$sleep_fragmentation_chart <- renderPlotly({
+    req(auth$logged_in, auth$is_admin)
+    df <- clinical_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No clinical data available"))
+    }
+    
+    is_all <- auth$is_admin && is.null(current_participant())
+    
+    if (is_all) {
+      plot_df <- df %>%
+        group_by(study_day) %>%
+        summarise(
+          waso_minutes = mean(waso_minutes, na.rm = TRUE),
+          awakenings = mean(awakenings, na.rm = TRUE),
+          .groups = "drop"
+        )
+      waso_label <- "Avg WASO (min, all participants)"
+    } else {
+      plot_df <- df %>%
+        select(study_day, waso_minutes, awakenings) %>%
+        filter(!is.na(study_day))
+      waso_label <- "WASO (minutes)"
+    }
+    
+    if (nrow(plot_df) == 0 || all(is.na(plot_df$waso_minutes))) {
+      return(create_empty_plot("No sleep fragmentation data available"))
+    }
+    
+    # Use plotly for dual y-axis (WASO bars + awakenings line)
+    plot_ly(data = plot_df) %>%
+      add_bars(
+        x = ~study_day, y = ~waso_minutes,
+        name = "WASO (min)",
+        marker = list(color = clr$rem, opacity = 0.7),
+        yaxis = "y",
+        hovertemplate = "Day %{x}<br>WASO: %{y:.0f} min<extra></extra>"
+      ) %>%
+      add_trace(
+        x = ~study_day, y = ~awakenings,
+        type = "scatter", mode = "lines+markers",
+        name = "Awakenings",
+        line = list(color = clr$hr, width = 2),
+        marker = list(color = clr$hr, size = 8),
+        yaxis = "y2",
+        hovertemplate = "Day %{x}<br>Awakenings: %{y:.1f}<extra></extra>"
+      ) %>%
+      layout(
+        xaxis = list(title = "Study Day", dtick = 1),
+        yaxis = list(
+          title = waso_label,
+          side = "left",
+          rangemode = "tozero"
+        ),
+        yaxis2 = list(
+          title = "Awakenings",
+          overlaying = "y",
+          side = "right",
+          rangemode = "tozero"
+        ),
+        legend = list(orientation = "h", xanchor = "center",
+                      x = 0.5, y = -0.5, title = list(text = "")),
+        hoverlabel = list(bgcolor = clr$bg),
+        margin = list(l = 50, r = 60, t = 20, b = 80)
+      )
+  })
+  
+  # Longest Sedentary Bout per Day
+  # Bar chart showing the longest single sedentary period each study day.
+  # Individual view: one participant. All Participants: averaged across participants.
+  output$longest_sedentary_chart <- renderPlotly({
+    req(auth$logged_in, auth$is_admin)
+    df <- clinical_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No clinical data available"))
+    }
+    
+    is_all <- auth$is_admin && is.null(current_participant())
+    
+    if (is_all) {
+      plot_df <- df %>%
+        group_by(study_day) %>%
+        summarise(
+          longest_sedentary_bout = mean(longest_sedentary_bout, na.rm = TRUE),
+          .groups = "drop"
+        )
+      y_label <- "Avg Longest Bout (min, all participants)"
+    } else {
+      plot_df <- df %>%
+        select(study_day, longest_sedentary_bout) %>%
+        filter(!is.na(study_day))
+      y_label <- "Longest Bout (minutes)"
+    }
+    
+    if (nrow(plot_df) == 0 || all(is.na(plot_df$longest_sedentary_bout))) {
+      return(create_empty_plot("No sedentary bout data available"))
+    }
+    
+    p <- ggplot(plot_df, aes(x = study_day, y = longest_sedentary_bout)) +
+      geom_col(fill = clr$green, width = 0.6, alpha = 0.85) +
+      geom_hline(yintercept = 60, linetype = "dashed",
+                 color = clr$yellow, linewidth = 0.5) +
+      scale_x_continuous(breaks = scales::pretty_breaks()) +
+      scale_y_continuous(breaks = scales::pretty_breaks()) +
+      labs(x = "Study Day", y = y_label) +
+      dash_theme()
+    
+    ggplotly(p, tooltip = c("x", "y")) %>%
+      layout(
+        hoverlabel = list(bgcolor = clr$bg),
+        margin = list(l = 50, r = 20, t = 20, b = 40),
+        annotations = list(
+          list(x = 1, y = 60, xref = "paper", yref = "y",
+               text = "60 min threshold", showarrow = FALSE,
+               xanchor = "right",
+               font = list(color = clr$yellow, size = 10))
+        )
+      )
+  })
+  
+  # Recovery Flag Heatmap
+  # Shows a 3-row heatmap of recovery signals: Low HRV, High Resting HR,
+  # and Short Sleep per study day. Flags are relative to participant's
+  # personal baseline (mean ± 1 SD for HRV/HR, < 6 hrs for sleep).
+  # Individual view: one participant. All Participants: cohort-level flags.
+  output$recovery_flag_chart <- renderPlotly({
+    req(auth$logged_in, auth$is_admin)
+    df <- clinical_data()
+    if (is.null(df) || nrow(df) == 0) {
+      return(create_empty_plot("No clinical data available"))
+    }
+    
+    is_all <- auth$is_admin && is.null(current_participant())
+    
+    if (is_all) {
+      # Re-derive flags from cohort averages
+      df <- df %>%
+        group_by(study_day) %>%
+        summarise(
+          hrv_avg_nightly = mean(hrv_avg_nightly, na.rm = TRUE),
+          resting_heart_rate = mean(resting_heart_rate, na.rm = TRUE),
+          total_sleep_minutes = mean(total_sleep_minutes, na.rm = TRUE),
+          .groups = "drop"
+        ) %>%
+        mutate(
+          hrv_mean = mean(hrv_avg_nightly, na.rm = TRUE),
+          hrv_sd = replace_na(sd(hrv_avg_nightly, na.rm = TRUE), 0),
+          rhr_mean = mean(resting_heart_rate, na.rm = TRUE),
+          rhr_sd = replace_na(sd(resting_heart_rate, na.rm = TRUE), 0),
+          low_hrv = ifelse(!is.na(hrv_avg_nightly),
+                           hrv_avg_nightly < (hrv_mean - hrv_sd), NA),
+          high_resting_hr = ifelse(!is.na(resting_heart_rate),
+                                   resting_heart_rate > (rhr_mean + rhr_sd), NA),
+          short_sleep = ifelse(!is.na(total_sleep_minutes),
+                               total_sleep_minutes < 360, NA),
+          # HRV and HR deviation from mean for hover
+          hrv_dev = round(hrv_avg_nightly - hrv_mean, 1),
+          rhr_dev = round(resting_heart_rate - rhr_mean, 1)
+        )
+    } else {
+      df <- df %>%
+        mutate(
+          hrv_dev = round(hrv_avg_nightly - hrv_person_mean, 1),
+          rhr_dev = round(resting_heart_rate - rhr_person_mean, 1)
+        )
+    }
+    
+    # Pivot recovery flags to long format
+    recovery_labels <- c(
+      low_hrv = "Low HRV",
+      high_resting_hr = "High Resting HR",
+      short_sleep = "Short Sleep (< 6 hrs)"
+    )
+    
+    recovery_long <- df %>%
+      select(study_day, low_hrv, high_resting_hr, short_sleep,
+             hrv_avg_nightly, resting_heart_rate, total_sleep_minutes,
+             hrv_dev, rhr_dev) %>%
+      pivot_longer(
+        cols = c(low_hrv, high_resting_hr, short_sleep),
+        names_to = "signal",
+        values_to = "flagged"
+      ) %>%
+      mutate(
+        signal_label = recovery_labels[signal],
+        signal_label = factor(signal_label, levels = rev(recovery_labels)),
+        z_value = case_when(
+          is.na(flagged) ~ -1,
+          flagged == TRUE ~ 1,
+          flagged == FALSE ~ 0
+        ),
+        hover_text = case_when(
+          signal == "low_hrv" ~ paste0(
+            "Day ", study_day, "<br>",
+            signal_label, ": ", ifelse(is.na(flagged), "No data",
+                                       ifelse(flagged, "FLAGGED", "Normal")),
+            "<br>HRV: ", round(hrv_avg_nightly, 1), " ms",
+            "<br>Deviation: ", hrv_dev, " ms"
+          ),
+          signal == "high_resting_hr" ~ paste0(
+            "Day ", study_day, "<br>",
+            signal_label, ": ", ifelse(is.na(flagged), "No data",
+                                       ifelse(flagged, "FLAGGED", "Normal")),
+            "<br>Resting HR: ", round(resting_heart_rate, 1), " bpm",
+            "<br>Deviation: +", rhr_dev, " bpm"
+          ),
+          signal == "short_sleep" ~ paste0(
+            "Day ", study_day, "<br>",
+            signal_label, ": ", ifelse(is.na(flagged), "No data",
+                                       ifelse(flagged, "FLAGGED", "Normal")),
+            "<br>Sleep: ", round(total_sleep_minutes), " min"
+          )
+        )
+      )
+    
+    if (nrow(recovery_long) == 0) {
+      return(create_empty_plot("No recovery data available"))
+    }
+    
+    plot_ly(
+      data = recovery_long,
+      x = ~paste("Day", study_day),
+      y = ~signal_label,
+      z = ~z_value,
+      type = "heatmap",
+      text = ~hover_text,
+      hoverinfo = "text",
+      colorscale = list(
+        c(0, clr$lightgrey),
+        c(0.5, clr$green),
+        c(1, clr$vermillion)
+      ),
+      zmin = -1,
+      zmax = 1,
+      showscale = FALSE
+    ) %>%
+      layout(
+        xaxis = list(title = "", tickangle = 0, type = "category"),
+        yaxis = list(title = "", tickfont = list(size = 11)),
+        margin = list(l = 180, r = 20, t = 20, b = 40),
         hoverlabel = list(bgcolor = clr$bg)
       )
   })
