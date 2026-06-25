@@ -18,3 +18,7 @@ xlsx_source/*
 !xlsx_source/.gitkeep
 
 notes_salome.txt
+commands_README.txt
+example_charts.html
+example_charts.Rmd
+reference_charts.Rmd

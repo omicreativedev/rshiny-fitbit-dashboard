@@ -43,13 +43,11 @@ then run scripts/excel_to_csv-sheet.R
 rshiny_fitbit-dashboard/
 ├── rshiny_fitbit-dashboard.Rproj # Project file to click to open project
 ├── app.R                         # Main Shiny application entry point
-├── example_charts.Rmd            # Example charts
-├── reference_charts.Rmd          # Reference charts
-├── commands_README.txt           # Useful commands reference
 ├── roles.csv                     # Role definitions used by the app
 ├── renv.lock                     # Locked package versions for reproducibility
 ├── R/                            # Include R scripts
 │   └── colours.R                 # Custom color palette definitions
+│   └── chart_card.R              # Information popover card descriptions
 ├── www/
 │   └── custom.css                # Custom CSS styling (light mode)
 │   └── darkmode.css              # Example darkmode styling
@@ -57,7 +55,7 @@ rshiny_fitbit-dashboard/
 │   ├── excel_to_csv-sheets.R     # Converts an xlsx workbook to CSVs per sheet
 │   ├── merge_excel_files.R       # Draft script for merging multiple workbooks
 │   └── install_packages.R        # Helper to install required packages
-├── csvdata/                      # CSV files exported from the xlsx source (gitignored)
+├── csvdata/                      # CSV files exported from the xlsx source (mock data)
 │   ├── daily_metrics.csv             # < Gitignored: Your csv's must be named
 │   ├── activity_sessions.csv         # < these exact names based on the tab
 │   ├── activity_level_intraday.csv   # < names in the Source Fitbit data workbook
@@ -73,7 +71,7 @@ rshiny_fitbit-dashboard/
 │   ├── fetch_log.csv                 # <
 │   └── tokenSheet.csv                # Fitbit API token storage (emptied!)
 ├── xlsx_source/                  # Source Fitbit data workbook (gitignored)
-│   └── FitbitDataSync.xlsx       # Google Sheet App downloaded as .xlsx
+│   └── [YOUR FILE HERE]          # Google Sheet App downloaded as .xlsx
 └── renv/                         # renv package management (auto-managed)
 ```
 
@@ -90,4 +88,4 @@ rshiny_fitbit-dashboard/
 All Rights Reserved
 
 ## Version
-0.2
+1.0

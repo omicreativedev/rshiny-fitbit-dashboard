@@ -8,7 +8,6 @@
 library(bslib)           # popover() and tooltip()
 library(bsicons)         # Info card icon, view chart icon
 library(shinyWidgets)    # dropdownButton(), panel(), etc.
-library(shinyBS)         # bsCollapse(), bsCollapsePanel()
 library(shiny)           # Web application framework
 library(shinyjs)         # For showing/hiding UI elements
 library(tidyverse)       # Data manipulation (dplyr, ggplot2, etc.)

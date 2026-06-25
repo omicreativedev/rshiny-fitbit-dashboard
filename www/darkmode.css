@@ -17,6 +17,25 @@ body {
   width: 130px !important;
 }
 
+.nav-tabs .nav-link {
+  font-size: 14px;
+}
+
+.dataTables_wrapper {
+  font-size: 14px;
+}
+
+.dataTables_wrapper label,
+.dataTables_wrapper select,
+.dataTables_wrapper input {
+  font-size: 14px;
+}
+
+#data_view_select-label,
+#data_view_select {
+  font-size: 13px;
+}
+
 /* ============================================================
    TOP BAR
    ============================================================ */
@@ -67,18 +86,27 @@ body {
   margin-bottom: 0;
 }
 
-/* Override Shiny input colours for dark mode */
-.login-section input[type="text"],
-.filters-row input[type="text"],
-.filters-row select,
-.filters-row .form-control {
-  background-color: #0f1623;
-  color: #d1d9e8;
-  border: 1px solid #2e3f60;
+/* Bootstrap 5's default actionButton size renders taller than the
+   adjacent textInput. Constrain padding/font-size so both controls
+   line up at the same height. */
+.login-form .btn {
+  padding: 6px 14px;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
-.login-section input[type="text"]::placeholder {
-  color: #4a5e80;
+/* Logout button: same blue as Login, not Bootstrap's default red
+   .btn-danger styling. Overridden here rather than changing the
+   class in app.R, so this stays a pure styling decision. */
+.login-form .btn-danger {
+  background-color: #2d4f8a;
+  border-color: #2a4a80;
+  color: #ffffff;
+}
+
+.login-form .btn-danger:hover {
+  background-color: #3a5f9f;
+  border-color: #3a5a90;
 }
 
 .user-info {
@@ -105,22 +133,47 @@ body {
   margin-bottom: 0;
 }
 
-.filters-row label,
-.filters-row .control-label {
-  color: #8a9fc0;
+.view-toggle .radio-inline {
+  font-size: 13px;
 }
 
 .admin-selector {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  align-items: flex-start;
 }
 
-.admin-selector label {
-  margin-bottom: 0;
-  font-size: 13px;
+.admin-selector .form-select,
+.admin-selector select {
+  font-size: 16px;
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
+
+.shiny-panel-conditional div label {
+    font-size: 16px;
+}
+
+#participant-label,
+label[for="date_range"],
+label[for="admin_participant-selectized"] {
+  display: block;
+  font-size: 16px;
   font-weight: normal;
   color: #8a9fc0;
+  margin-bottom: 2px;
+}
+
+/* Override Shiny input colours for dark mode */
+.filters-row input[type="text"],
+.filters-row select,
+.filters-row .form-control {
+  background-color: #0f1623;
+  color: #d1d9e8;
+  border: 1px solid #2e3f60;
+}
+
+.filters-row input[type="text"]::placeholder {
+  color: #4a5e80;
 }
 
 /* ============================================================
@@ -205,6 +258,52 @@ body {
 }
 
 /* ============================================================
+   CHART CARD ICONS (collapse toggle + info popover trigger)
+   ============================================================ */
+/* These icons are used by R/chart_card.R's chart_card_ui() wrapper,
+   applied to every chart card via class names rather than inline
+   styles, so the colors and sizing can be adjusted here without
+   touching app.R. */
+
+/* Shared sizing/cursor for both icon types */
+.chart-toggle-trigger,
+.chart-info-trigger {
+  cursor: pointer;
+  font-size: 20px;
+  display: inline-flex;
+  align-items: center;
+  transition: color 0.15s ease;
+}
+
+/* ---- Collapse/expand (eye) icon ---- */
+/* Color is set directly by app.R's renderUI via these two classes,
+   since this icon's open/closed state is genuine server-side state
+   (chart_state), not something CSS can infer on its own. */
+
+.chart-toggle-trigger.chart-toggle-open {
+  color: #4a7ab5; /* chart visible — softer blue for dark mode */
+}
+
+.chart-toggle-trigger.chart-toggle-collapsed {
+  color: #5a7099; /* chart hidden — muted grey-blue */
+}
+
+/* ---- Info (i) icon ---- */
+/* Softer blue for dark mode, matching the eye toggle's "open" state
+   for visual consistency between the two chart card icons. */
+.chart-info-trigger {
+  color: #4a7ab5;
+}
+
+/* Active (popover open) color — stays the same blue, since this icon
+   no longer needs a separate inactive state. Bootstrap automatically
+   adds the aria-describedby attribute to this exact span while its
+   popover is open, and removes it when closed. */
+.chart-info-trigger[aria-describedby] {
+  color: #6b9ad5;
+}
+
+/* ============================================================
    SHINY TABS (dark overrides)
    ============================================================ */
 
@@ -212,21 +311,21 @@ body {
   border-bottom: 1px solid #2a3a5c;
 }
 
-.nav-tabs > li > a {
+.nav-tabs .nav-link {
   color: #6b82a8;
   background: transparent;
   border-color: transparent;
 }
 
-.nav-tabs > li > a:hover {
+.nav-tabs .nav-link:hover {
   color: #b0c4de;
   background: #1e2d4a;
   border-color: #2a3a5c;
 }
 
-.nav-tabs > li.active > a,
-.nav-tabs > li.active > a:focus,
-.nav-tabs > li.active > a:hover {
+.nav-tabs .nav-link.active,
+.nav-tabs .nav-link.active:focus,
+.nav-tabs .nav-link.active:hover {
   color: #dce6f5;
   background: #1c2a45;
   border: 1px solid #2a3a5c;
@@ -246,4 +345,36 @@ body {
 .btn-primary:hover {
   background: linear-gradient(135deg, #3a5f9f 0%, #4a72b5 100%);
   border-color: #3a5a90;
+}
+
+/* ============================================================
+   DATA TABLES (dark overrides)
+   ============================================================ */
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  color: #6b82a8 !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+  color: #b0c4de !important;
+  background: #1e2d4a !important;
+  border-color: #2a3a5c !important;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+  color: #dce6f5 !important;
+  background: #2d4f8a !important;
+  border-color: #2a4a80 !important;
+}
+
+.dataTables_wrapper .dataTables_filter input,
+.dataTables_wrapper .dataTables_length select {
+  background-color: #0f1623;
+  color: #d1d9e8;
+  border: 1px solid #2e3f60;
+}
+
+.dataTables_wrapper .dataTables_info {
+  color: #6b82a8;
 }
