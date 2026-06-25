@@ -1,6 +1,0 @@
----
-title: "reference_charts"
-output: html_document
----
-
-# official references for every final chart here
