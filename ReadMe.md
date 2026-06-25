@@ -86,6 +86,7 @@ rshiny_fitbit-dashboard/
 
 ## License
 All Rights Reserved
+Contact lauren.trichtinger@simmons.edu
 
 ## Version
 1.0
